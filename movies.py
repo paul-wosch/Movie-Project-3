@@ -5,6 +5,11 @@ import statistics
 from datetime import date
 
 import movie_storage
+import data_processing
+
+# Modify after implementing user management
+DEFAULT_USER_ID = 1
+CURRENT_USER_ID = DEFAULT_USER_ID
 
 MENU_ENTRIES = [
     " 0. Exit",
@@ -119,10 +124,12 @@ def list_movies(*data, nested_call=False):
     """Show all the movies in the database with their details.
 
     The function can also be called by the sort or search function."""
+    # TODO: Check behaviour when movies table is empty.
+    user_id = CURRENT_USER_ID
     color_on("cyan", False)
     print()
     if not nested_call:
-        data = movie_storage.get_movies()
+        data = data_processing.get_movies(user_id=user_id)
         print(f"{len(data)} movies in total:\n")
     else:
         # Because we passed the data as an optional argument...

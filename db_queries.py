@@ -70,7 +70,8 @@ LIST_MOVIES = """
         movies.title,
         movies.year,
         countries.name,
-        ratings.rating
+        ratings.rating,
+        ratings.note
     FROM ratings
     JOIN
         users ON ratings.user_id = users.id

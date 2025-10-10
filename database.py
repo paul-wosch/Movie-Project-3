@@ -50,7 +50,10 @@ def initialize_database(queries):
 # CRUD OPERATIONS
 # ---------------------------------------------------------------------
 def get_movies(params=None):
-    """Return movies from the database (for the given user)."""
+    """Return movies from the database (for the given user).
+
+    Include rating information only when querying by user.
+    """
     if params:
         query = db_queries.LIST_MOVIES
         movies = query_database(query, params)
