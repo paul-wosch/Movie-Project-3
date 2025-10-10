@@ -10,7 +10,7 @@ DB_INIT_QUERIES = [
     db_queries.CREATE_TABLE_USERS,
     db_queries.CREATE_TABLE_COUNTRIES,
     db_queries.CREATE_TABLE_MOVIES,
-    db_queries.CREATE_TABLE_USERS_MOVIES
+    db_queries.CREATE_TABLE_RATINGS
 ]
 
 # Create the engine

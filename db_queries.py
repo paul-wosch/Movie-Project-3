@@ -1,14 +1,15 @@
 """This module contains all sqlite queries used.
 
 It also serves as a documentation for the different key value pairs
-needed to pass when calling the different sqlite query functions.
+needed to pass when calling the different sqlite query functions
+performing CRUD operations to the database.
 
 Simplified database structure for the project:
 
-    users: id:int (PK), user_name (unique), first_name, last_name
+    users: id:int (PK), user_name:text (unique), first_name:text, last_name:text, password_hash:text
     movies: id:int (PK), title:text (unique), year:int, country_id:in (FK)
     countries: id:int (PK), name:text, code:text
-    users_movies: user_id:int (PK, FK), movie_id:int (PK, FK), rating:real
+    ratings: user_id:int (PK, FK), movie_id:int (PK, FK), rating:real, note:text
 """
 
 # ---------------------------------------------------------------------
@@ -23,10 +24,11 @@ CREATE_TABLE_MOVIES_EXAMPLE = """
         )"""
 CREATE_TABLE_USERS = """
     CREATE TABLE IF NOT EXISTS users (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_name   TEXT UNIQUE NOT NULL,
-        first_name  TEXT,
-        last_name   TEXT
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_name       TEXT UNIQUE NOT NULL,
+        first_name      TEXT,
+        last_name       TEXT,
+        password_hash   TEXT
     )"""
 CREATE_TABLE_COUNTRIES = """
     CREATE TABLE IF NOT EXISTS countries (
@@ -42,11 +44,12 @@ CREATE_TABLE_MOVIES = """
         country_id  INTEGER,
         FOREIGN KEY(country_id) REFERENCES countries(id)
     )"""
-CREATE_TABLE_USERS_MOVIES = """
-    CREATE TABLE IF NOT EXISTS users_movies (
+CREATE_TABLE_RATINGS = """
+    CREATE TABLE IF NOT EXISTS ratings (
         rating      REAL NOT NULL,
         user_id     INTEGER,
         movie_id    INTEGER,
+        note        TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id),
         FOREIGN KEY(movie_id) REFERENCES movies(id)
     )"""
@@ -57,7 +60,7 @@ ADD_USER = ""
 ADD_COUNTRY = "INSERT INTO countries (name, code) VALUES (:name, :code)"
 ADD_MOVIE = ("INSERT INTO movies (title, year, country_id)"
              "VALUES (:title, :year, :country_id)")
-ADD_RATING = ("INSERT INTO users_movies (rating, user_id, movie_id)"
+ADD_RATING = ("INSERT INTO ratings (rating, user_id, movie_id)"
               "VALUES (:rating, :user_id, :movie_id)")
 # ---------------------------------------------------------------------
 # READ
@@ -67,15 +70,15 @@ LIST_MOVIES = """
         movies.title,
         movies.year,
         countries.name,
-        users_movies.rating
-    FROM users_movies
+        ratings.rating
+    FROM ratings
     JOIN
-        users ON users_movies.user_id = users.id
+        users ON ratings.user_id = users.id
     JOIN
-        movies ON users_movies.movie_id = movies.id
+        movies ON ratings.movie_id = movies.id
     JOIN
         countries ON countries.id = movies.country_id
-    WHERE users_movies.user_id = :user_id
+    WHERE ratings.user_id = :user_id
 """
 LIST_MOVIES_ALL_USERS = """
     SELECT
@@ -97,8 +100,8 @@ UPDATE_MOVIE = """
     WHERE id = :id
 """
 UPDATE_RATING = """
-    UPDATE users_movies
-    SET rating = :rating
+    UPDATE ratings
+    SET rating = :rating, note = :note
     WHERE user_id = :user_id AND movie_id = :movie_id
 """
 # ---------------------------------------------------------------------
@@ -106,6 +109,6 @@ UPDATE_RATING = """
 # ---------------------------------------------------------------------
 DELETE_USER = ""
 DELETE_RATING = """
-    DELETE FROM users_movies
+    DELETE FROM ratings
     WHERE user_id = :user_id AND movie_id = :movie_id
 """
