@@ -14,9 +14,9 @@ CURRENT_USER_ID = DEFAULT_USER_ID
 MENU_ENTRIES = [
     " 0. Exit",
     " 1. List data",
-    " 2. Add movie",
-    " 3. Delete movie",
-    " 4. Update movie",
+    " 2. Add movie rating",
+    " 3. Delete movie rating",
+    " 4. Update movie rating",
     " 5. Stats",
     " 6. Random movie",
     " 7. Search movie",
