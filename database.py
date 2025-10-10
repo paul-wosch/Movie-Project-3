@@ -23,27 +23,79 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
 
-def modify_database(query):
+def modify_database(query, params):
     """Modify database with the given sql query
     to produce permanent changes like
     adding, updating, or deleting objects.
     """
     with engine.connect() as connection:
-        connection.execute(text(query))
+        connection.execute(text(query), params)
         connection.commit()
 
 
-def query_database(query):
+def query_database(query, params):
     """Return results for the given query from a database."""
     with engine.connect() as connection:
-        results = connection.execute(text(query))
+        results = connection.execute(text(query), params)
     return results.fetchall()
 
 
 def initialize_database(queries):
     """Initialize database with the given list of queries."""
     for query in queries:
-        modify_database(query)
+        modify_database(query, params={})
+
+
+# ---------------------------------------------------------------------
+# CRUD OPERATIONS
+# ---------------------------------------------------------------------
+def get_movies(params=None):
+    """Return movies from the database (for the given user)."""
+    if params:
+        query = db_queries.LIST_MOVIES
+        movies = query_database(query, params)
+        return movies
+    else:
+        query = db_queries.LIST_MOVIES_ALL_USERS
+        movies = query_database(query, params={})
+        return movies
+
+
+def get_country(code):
+    """Return country for the given country code."""
+    params = {"code": code}
+    query = db_queries.GET_COUNTRY
+    return query_database(query, params)
+
+
+def add_country(params):
+    """Add country to the countries table."""
+    query = db_queries.ADD_COUNTRY
+    modify_database(query, params)
+
+
+def add_rating(params):
+    """Add rating to the ratings table."""
+    query = db_queries.ADD_RATING
+    modify_database(query, params)
+
+
+def add_movie(params):
+    """Add movie to the movies table."""
+    query = db_queries.ADD_MOVIE
+    modify_database(query, params)
+
+
+def delete_rating(params):
+    """Delete a movie's rating in the database."""
+    query = db_queries.DELETE_RATING
+    modify_database(query, params)
+
+
+def update_rating(params):
+    """Update a movie's rating in the database."""
+    query = db_queries.UPDATE_MOVIE
+    modify_database(query, params)
 
 
 def main():
