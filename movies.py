@@ -264,7 +264,7 @@ def ask_for_sort_order():
             print("Invalid input")
 
 
-def add_movie():
+def add_movie_rating():
     """Adds a movie to the Database."""
     data = movie_storage.get_movies()
     color_on("yellow", False)
@@ -277,7 +277,7 @@ def add_movie():
         color_on("red", False)
         print(f"Movie '{movie_title}' already exist!")
         # Recurse to start the function again.
-        add_movie()
+        add_movie_rating()
     else:
         title = movie_title
         # Ask for movie details
@@ -295,7 +295,7 @@ def add_movie():
     return True
 
 
-def delete_movie():
+def delete_movie_rating():
     """Deletes a movie from the database."""
     data = movie_storage.get_movies()
     color_on("yellow", False)
@@ -308,7 +308,7 @@ def delete_movie():
         color_on("red", False)
         print(f"Movie '{movie_title}' doesn't exist!")
         # Recurse to start the function again.
-        delete_movie()
+        delete_movie_rating()
     else:
         movie_storage.delete_movie(movie_title)
         color_on("cyan", False)
@@ -316,7 +316,7 @@ def delete_movie():
     return True
 
 
-def update_movie():
+def update_movie_rating():
     """Ask the user to enter a movie name
     and update the movie’s rating in the database.
     """
@@ -331,7 +331,7 @@ def update_movie():
         color_on("red", False)
         print(f"Movie '{movie_title}' doesn't exist!")
         # Recurse to start the function again:
-        update_movie()
+        update_movie_rating()
     else:
         title = movie_title
         # Ask for movie details
@@ -550,9 +550,9 @@ def invalid_choice():
 DISPATCH_TABLE = {
     "0": do_nothing,
     "1": list_movies,
-    "2": add_movie,
-    "3": delete_movie,
-    "4": update_movie,
+    "2": add_movie_rating,
+    "3": delete_movie_rating,
+    "4": update_movie_rating,
     "5": get_movie_stats,
     "6": get_random_movie,
     "7": search_movie,
