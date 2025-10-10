@@ -265,7 +265,7 @@ def ask_for_sort_order():
 
 
 def add_movie_rating():
-    """Adds a movie to the Database."""
+    """Add movie rating to the Database."""
     data = movie_storage.get_movies()
     color_on("yellow", False)
     movie_title = ask_for_name()
@@ -296,7 +296,7 @@ def add_movie_rating():
 
 
 def delete_movie_rating():
-    """Deletes a movie from the database."""
+    """Delete a movie rating from the database."""
     data = movie_storage.get_movies()
     color_on("yellow", False)
     movie_title = ask_for_name()
