@@ -3,6 +3,8 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 import db_queries
 
+# Show SQL queries in the CLI
+ECHO_SQL = False
 # Define the database URL
 DB_URL = "sqlite:///data/movies.sqlite3"
 # Queries for database initialization
@@ -14,7 +16,7 @@ DB_INIT_QUERIES = [
 ]
 
 # Create the engine
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL, echo=ECHO_SQL)
 
 
 @event.listens_for(Engine, "connect")
@@ -64,11 +66,26 @@ def get_movies(params=None):
         return movies
 
 
-def get_country(code):
-    """Return country for the given country code."""
-    params = {"code": code}
-    query = db_queries.GET_COUNTRY
-    return query_database(query, params)
+def get_movie(params):
+    """Return a single movie from the database."""
+    if params.get("id"):
+        query = db_queries.GET_MOVIE_BY_ID
+    else:
+        query = db_queries.GET_MOVIE_BY_TITLE
+    movie = query_database(query, params)
+    return movie
+
+
+def get_country(params):
+    """Return country object from the countries table."""
+    if params.get("id"):
+        query = db_queries.GET_COUNTRY_BY_ID
+    elif params.get("code"):
+        query = db_queries.GET_COUNTRY_BY_CODE
+    else:
+        query = db_queries.GET_COUNTRY_BY_NAME
+    country = query_database(query, params)
+    return country
 
 
 def add_country(params):
@@ -102,8 +119,9 @@ def update_rating(params):
 
 
 def main():
-    initialize_database(DB_INIT_QUERIES)
-
+    # initialize_database(DB_INIT_QUERIES)
+    print(get_country({"id": 1}))
+    print(get_country({"name": "Poland"}))
 
 if __name__ == "__main__":
     main()

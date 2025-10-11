@@ -24,42 +24,74 @@ def get_movies(user_id=None):
     return movies_dict
 
 
-def get_country_code():
-    country_code = "US"
-    print(country_code)
-    print(db.get_country(country_code))
-    print(pycountry.countries.lookup('us'))
+def get_movie(search_value, find_by_id=False) -> dict:
+    """Return a movie object for the given search value (id/title)."""
+    if find_by_id:
+        params = {"id": search_value}
+    else:
+        params = {"title": search_value}
+    movie = db.get_movie(params)[0]
+    movie_object = {"id": movie[0],
+                    "title": movie[1],
+                    "year": movie[2],
+                    "country": movie[3],
+                    "country_id": movie[4]
+                    }
+    return movie_object
 
 
-def add_country():
-    # --- ADD COUNTRY ---
-    country_name = "United Kingdom"
-    country = pycountry.countries.lookup(country_name)
-    country_dict = dict(country)
-    code = country_dict["alpha_2"]
-    params = {"name": country_name, "code": code}
-    if not db.get_country(code):
-        db.add_country(params)
+def get_country_by_name(name):
+    """Return a country object for the given search value."""
+    params = {"name": name}
+    country = db.get_country(params)
+    # Retrieve country object from database...
+    if country:
+        country = country[0]
+        country_dict = {"id": country[0],
+                        "name": country[1],
+                        "code": country[2]
+                        }
+    # ...or generate a new one using the 'pycountry' module.
+    else:
+        # Use temporary id to tag newly generated country object.
+        temp_id = -1
+        country = pycountry.countries.lookup(name)
+        country_dict = {"id": temp_id,
+                        "name": country.name,
+                        "code": country.alpha_2
+                        }
+    return country_dict
 
 
-def add_movie():
-    # --- ADD MOVIE ---
-    title = "The Frog 3"
-    year = "1992"
-    country_code = "ES"
-    # country_id = get_country("DE")[0][0]
-    # params = {"title": title, "year": year, "country_id": country_id}
-    params = {"title": title, "year": year, "country_code": country_code}
+def add_country(name, code):
+    """Add country to the database and return the id."""
+    params = {"name": name, "code": code}
+    db.add_country(params)
+    return get_country_by_name(name)["id"]
+
+
+def add_movie(title, year, country_id):
+    """Add movie to the database and return the id."""
+    params = {"title": title, "year": year, "country_id": country_id}
     db.add_movie(params)
+    return get_movie(title)["id"]
 
 
-def rate_movie():
-    """Rate new or existing movie."""
-    pass
+def add_rating(user_id, movie_id, rating, note=""):
+    """Add movie rating to the database."""
+    params = {"user_id": user_id,
+              "movie_id": movie_id,
+              "rating": rating,
+              "note": note
+              }
+    db.add_rating(params)
 
 
 def main():
     # print(get_movies(1))
+    # print(get_movie(1, find_by_id=True))
+    print(get_country_by_name("United States"))
+    print(get_country_by_name("Poland"))
     pass
 
 

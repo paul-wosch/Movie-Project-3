@@ -247,6 +247,33 @@ def ask_for_year(allow_blank=False,
             print(error_msg)
 
 
+def ask_for_country(allow_blank=False,
+                 prompt="Enter the country of origin "
+                        "or '..' to cancel: "):
+    """Ask the user for the country of origin of a movie
+    and return this value.
+
+    Return early when user wants to cancel and '..' is entered.
+    """
+    while True:
+        error_msg = "Invalid input"
+        try:
+            color_on("yellow", False)
+            country = input(prompt).strip()
+            # For function calls that allow blank input.
+            if allow_blank and country == "":
+                return None
+            # Action should be cancelled.
+            if country == "..":
+                print_action_canceled()
+                return False
+            # Return country name if input is valid.
+            return country
+        except ValueError:
+            color_on("red", False)
+            print(error_msg)
+
+
 def ask_for_sort_order():
     """Ask the user for descending or ascending order."""
     accepted_input = {"first", "last"}
@@ -266,32 +293,59 @@ def ask_for_sort_order():
 
 def add_movie_rating():
     """Add movie rating to the Database."""
-    data = movie_storage.get_movies()
-    color_on("yellow", False)
+    # -----------------------------------------------------------------
+    # Always return early if user wants to cancel / has entered '..'.
+    data_current_user = data_processing.get_movies(CURRENT_USER_ID)
+    data_all_users = data_processing.get_movies()
     movie_title = ask_for_name()
-    # Return early if user wants to cancel and entered '..'.
     if movie_title is False:
         return False
-    # Check if the film already exists.
-    if is_in_movies(data, movie_title):
+    # -----------------------------------------------------------------
+    # Check if current user already rated the movie.
+    if is_in_movies(data_current_user, movie_title):
         color_on("red", False)
-        print(f"Movie '{movie_title}' already exist!")
-        # Recurse to start the function again.
-        add_movie_rating()
+        print(f"You already rated '{movie_title}'!{color_off()}")
+        return False
+    # -----------------------------------------------------------------
+    # If movie is found in the movies table
+    # skip asking for movie details.
+    if is_in_movies(data_all_users, movie_title):
+        # get movie details from database
+        movie_details = data_processing.get_movie(movie_title)
+        print(f"Found movie '{movie_title}' in the database.")
+        print(f"Skip prompting for movie details...")
+        movie_id = movie_details["id"]
+    # -----------------------------------------------------------------
+    # ...otherwise ask for movie details.
     else:
-        title = movie_title
-        # Ask for movie details
-        # and return early if user wants to cancel.
-        rating = ask_for_rating()
-        if rating is False:
-            return False
         year = ask_for_year()
         if year is False:
             return False
-        # Add the movie.
-        movie_storage.add_movie(title, year, rating)
-        color_on("cyan", False)
-        print(f"Movie '{movie_title}' successfully added")
+        # Get country object.
+        country_name = ask_for_country()
+        if country_name is False:
+            return False
+        country_object = data_processing.get_country_by_name(country_name)
+        country_id = country_object["id"]
+        # For temporary id (-1) add country to database.
+        if country_id == -1:
+            print("Adding country data to database...")
+            name = country_object["name"]
+            code = country_object["code"]
+            country_id = data_processing.add_country(name, code)
+            print(f"Successfully added country data for '{name}'. (ID: {country_id})")
+        # Add movie to database
+        print(f"Movie details complete. Adding movie to database...")
+        movie_id = data_processing.add_movie(movie_title, year, country_id)
+        print(f"Successfully added '{movie_title}'. (ID: {movie_id})")
+    # -----------------------------------------------------------------
+    # Finally ask for the rating and store it in the database.
+    rating = ask_for_rating()
+    if rating is False:
+        return False
+    data_processing.add_rating(CURRENT_USER_ID, movie_id, rating)
+    color_on("cyan", False)
+    print(f"Successfully added rating for movie '{movie_title}'.{color_off()}")
     return True
 
 
@@ -583,8 +637,8 @@ def say_bye():
 
 def main():
     """Main function for testing when running the script under main."""
+    add_movie_rating()
     pass
-
 
 if __name__ == "__main__":
     main()

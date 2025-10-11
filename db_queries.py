@@ -60,8 +60,8 @@ ADD_USER = ""
 ADD_COUNTRY = "INSERT INTO countries (name, code) VALUES (:name, :code)"
 ADD_MOVIE = ("INSERT INTO movies (title, year, country_id)"
              "VALUES (:title, :year, :country_id)")
-ADD_RATING = ("INSERT INTO ratings (rating, user_id, movie_id)"
-              "VALUES (:rating, :user_id, :movie_id)")
+ADD_RATING = ("INSERT INTO ratings (user_id, movie_id, rating, note)"
+              "VALUES (:user_id, :movie_id, :rating, :note)")
 # ---------------------------------------------------------------------
 # READ
 # ---------------------------------------------------------------------
@@ -90,7 +90,33 @@ LIST_MOVIES_ALL_USERS = """
     JOIN
         countries ON countries.id = movies.country_id
 """
-GET_COUNTRY = "SELECT * FROM countries WHERE code = :code"
+GET_MOVIE_BY_TITLE = """
+    SELECT
+        movies.id,
+        movies.title,
+        movies.year,
+        countries.name,
+        countries.id
+    FROM movies
+    JOIN
+        countries ON countries.id = movies.country_id
+    WHERE movies.title = :title
+"""
+GET_MOVIE_BY_ID = """
+    SELECT
+        movies.id,
+        movies.title,
+        movies.year,
+        countries.name,
+        countries.id
+    FROM movies
+    JOIN
+        countries ON countries.id = movies.country_id
+    WHERE movies.id = :id
+"""
+GET_COUNTRY_BY_CODE = "SELECT * FROM countries WHERE code = :code"
+GET_COUNTRY_BY_NAME = "SELECT * FROM countries WHERE name = :name"
+GET_COUNTRY_BY_ID = "SELECT * FROM countries WHERE id = :id"
 # ---------------------------------------------------------------------
 # UPDATE
 # ---------------------------------------------------------------------
