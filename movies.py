@@ -637,7 +637,6 @@ def say_bye():
 
 def main():
     """Main function for testing when running the script under main."""
-    add_movie_rating()
     pass
 
 if __name__ == "__main__":
