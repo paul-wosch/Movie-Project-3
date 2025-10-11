@@ -1,12 +1,12 @@
 """Run the command line interface to manage a movie database."""
 from movies import (
-    clear_screen,
     show_menu,
     get_user_choice,
     say_bye,
     execute_user_choice,
     wait_for_enter_key
 )
+from cli_style import clear_screen
 
 while True:
     clear_screen()

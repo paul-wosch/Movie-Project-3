@@ -1,11 +1,11 @@
 import random
 import difflib
-import os
 import statistics
 from datetime import date
 
 import movie_storage
 import data_processing
+import cli_style as style
 
 # Modify after implementing user management
 DEFAULT_USER_ID = 1
@@ -38,44 +38,10 @@ class RatingOutOfRangeError(BaseException):
     """Raised when rating is not between 0-10."""
 
 
-def clear_screen():
-    """Clear the terminal screen from previous output."""
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-
-def match_color(text_color):
-    """Translate color names to their corresponding ANSI escape codes."""
-    colors = {"black": "0;90",
-              "red": "0;91",
-              "green": "0;92",
-              "yellow": "0;93",
-              "blue": "0;94",
-              "purple": "0;95",
-              "cyan": "0;96",
-              "white": "0;97"
-              }
-    return colors.get(text_color, None)
-
-
-def color_on(text_color=None, inline=True):
-    """Set color for the succeeding text."""
-    if match_color(text_color):
-        if not inline:
-            return print(f"\033[{match_color(text_color)}m", end="")
-    return f"\033[{match_color(text_color)}m"
-
-
-def color_off(inline=True):
-    """Turn off colored text."""
-    if not inline:
-        return print("\n\033[0m", end="")
-    return "\033[0m"
-
-
 def show_menu(active="0"):
     """Display the main menu with different options
     and ask for user's choice."""
-    color_on("green", False)
+    style.color_on("green", False)
     # Display the heading always with the menu.
     print("********** My Movies Database **********\n")
     print("Menu:")
@@ -83,24 +49,20 @@ def show_menu(active="0"):
     for i, entry in enumerate(MENU_ENTRIES):
         # Check if menu item is active and change color accordingly.
         if int(active) == i and int(active) != 0:
-            color_on('purple', False)
-            print(entry)
+            print(f"{style.ACTIVE}{entry}{style.OFF}")
         else:
-            color_on('green', False)
-            print(entry)
+            print(f"{style.DEFAULT}{entry}{style.OFF}")
 
 
 def get_user_choice():
     """Ask user for their menu choice."""
-    color_on('yellow', False)
-    choice = input(f"\nEnter choice (0-{len(MENU_ENTRIES) - 1}): ")
+    choice = input(f"{style.PROMPT}\nEnter choice (0-{len(MENU_ENTRIES) - 1}): {style.OFF}")
     return choice
 
 
 def wait_for_enter_key():
     """Stop the program until user hits enter key."""
-    color_on("yellow", False)
-    input("\nPress enter key to continue.\n")
+    input(f"{style.PROMPT}\nPress enter key to continue.\n{style.OFF}")
 
 
 def get_movie_titles(data):
@@ -126,11 +88,10 @@ def list_movies(*data, nested_call=False):
     The function can also be called by the sort or search function."""
     # TODO: Check behaviour when movies table is empty.
     user_id = CURRENT_USER_ID
-    color_on("cyan", False)
     print()
     if not nested_call:
         data = data_processing.get_movies(user_id=user_id)
-        print(f"{len(data)} movies in total:\n")
+        print(f"{style.OUTPUT}{len(data)} movies in total:\n{style.OFF}")
     else:
         # Because we passed the data as an optional argument...
         # ...we need to unpack tuple of one element.
@@ -138,13 +99,12 @@ def list_movies(*data, nested_call=False):
     for title, details in data.items():
         year = details["year"]
         rating = details["rating"]
-        print(format_movie_entry(title, year, rating))
+        print(f"{style.OUTPUT}{format_movie_entry(title, year, rating)}{style.OFF}")
 
 
 def print_action_canceled():
     """Print an information that an action has been canceled."""
-    color_on("cyan", False)
-    print("Action canceled, returning back to menu...")
+    print(f"{style.INFO}Action canceled, returning back to menu...{style.OFF}")
 
 
 def ask_for_name():
@@ -153,12 +113,10 @@ def ask_for_name():
     Return early when user wants to cancel and '..' is entered.
     """
     while True:
-        color_on("yellow", False)
-        movie_name = input("\nEnter the movie name "
-                           "or '..' to cancel: ").strip()
+        movie_name = input(f"{style.PROMPT}\nEnter the movie name "
+                           f"or '..' to cancel: {style.OFF}").strip()
         if movie_name == "":
-            color_on("red", False)
-            print("\nMovie name should not be empty!")
+            print(f"{style.ERROR}\nMovie name should not be empty!{style.OFF}")
         elif movie_name == "..":
             print_action_canceled()
             return False
@@ -173,12 +131,10 @@ def ask_for_name_part():
     Return early when user wants to cancel and '..' is entered.
     """
     while True:
-        color_on("yellow", False)
-        movie_name = input("\nEnter movie name, a part of it "
-                           "or '..' to cancel: ").strip()
+        movie_name = input(f"{style.PROMPT}\nEnter movie name, a part of it "
+                           f"or '..' to cancel: {style.OFF}").strip()
         if movie_name == "":
-            color_on("red", False)
-            print("Movie name or part of it should not be empty!")
+            print(f"{style.ERROR}Movie name or part of it should not be empty!{style.OFF}")
         elif movie_name == "..":
             print_action_canceled()
             return False
@@ -196,8 +152,7 @@ def ask_for_rating(allow_blank=False,
     """
     while True:
         try:
-            color_on("yellow", False)
-            rating = input(prompt).strip()
+            rating = input(f"{style.PROMPT}{prompt}{style.OFF}").strip()
             # For function calls that allow blank input.
             if allow_blank and rating == "":
                 return None
@@ -210,11 +165,9 @@ def ask_for_rating(allow_blank=False,
                 raise RatingOutOfRangeError
             return float(rating)
         except ValueError:
-            color_on("red", False)
-            print("Invalid input")
+            print(f"{style.ERROR}Invalid input{style.OFF}")
         except RatingOutOfRangeError:
-            color_on("red", False)
-            print("Rating must be between 0 and 10 (inclusive).")
+            print(f"{style.ERROR}Rating must be between 0 and 10 (inclusive).{style.OFF}")
 
 
 def ask_for_year(allow_blank=False,
@@ -228,8 +181,7 @@ def ask_for_year(allow_blank=False,
     while True:
         error_msg = "Invalid input"
         try:
-            color_on("yellow", False)
-            year = input(prompt).strip()
+            year = input(f"{style.PROMPT}{prompt}{style.OFF}").strip()
             # For function calls that allow blank input.
             if allow_blank and year == "":
                 return None
@@ -243,8 +195,7 @@ def ask_for_year(allow_blank=False,
                 raise InvalidYearError
             return int(year)
         except (ValueError, InvalidYearError):
-            color_on("red", False)
-            print(error_msg)
+            print(f"{style.ERROR}error_msg{style.OFF}")
 
 
 def ask_for_country(allow_blank=False,
@@ -258,8 +209,7 @@ def ask_for_country(allow_blank=False,
     while True:
         error_msg = "Invalid input"
         try:
-            color_on("yellow", False)
-            country = input(prompt).strip()
+            country = input(f"{style.PROMPT}{prompt}{style.OFF}").strip()
             # For function calls that allow blank input.
             if allow_blank and country == "":
                 return None
@@ -270,8 +220,7 @@ def ask_for_country(allow_blank=False,
             # Return country name if input is valid.
             return country
         except ValueError:
-            color_on("red", False)
-            print(error_msg)
+            print(f"{style.ERROR}error_msg{style.OFF}")
 
 
 def ask_for_sort_order():
@@ -279,16 +228,14 @@ def ask_for_sort_order():
     accepted_input = {"first", "last"}
     while True:
         try:
-            color_on("yellow", False)
-            sort_order = input("Do you want to see the "
+            sort_order = input(f"{style.PROMPT}Do you want to see the "
                                "latest movies first or last?"
-                               "\nEnter 'first' or 'last: ").strip().lower()
+                               f"\nEnter 'first' or 'last: {style.OFF}").strip().lower()
             if not sort_order in accepted_input:
                 raise InvalidInputError
             return sort_order
         except (ValueError, InvalidInputError):
-            color_on("red", False)
-            print("Invalid input")
+            print(f"{style.ERROR}Invalid input{style.OFF}")
 
 
 def add_movie_rating():
@@ -303,8 +250,7 @@ def add_movie_rating():
     # -----------------------------------------------------------------
     # Check if current user already rated the movie.
     if is_in_movies(data_current_user, movie_title):
-        color_on("red", False)
-        print(f"You already rated '{movie_title}'!{color_off()}")
+        print(f"{style.ERROR}You already rated '{movie_title}'!{style.OFF}")
         return False
     # -----------------------------------------------------------------
     # If movie is found in the movies table
@@ -312,8 +258,8 @@ def add_movie_rating():
     if is_in_movies(data_all_users, movie_title):
         # get movie details from database
         movie_details = data_processing.get_movie(movie_title)
-        print(f"Found movie '{movie_title}' in the database.")
-        print(f"Skip prompting for movie details...")
+        print(f"{style.INFO}Found movie '{movie_title}' in the database.")
+        print(f"Skip prompting for movie details...{style.OFF}")
         movie_id = movie_details["id"]
     # -----------------------------------------------------------------
     # ...otherwise ask for movie details.
@@ -329,44 +275,41 @@ def add_movie_rating():
         country_id = country_object["id"]
         # For temporary id (-1) add country to database.
         if country_id == -1:
-            print("Adding country data to database...")
+            print(f"{style.INFO}Adding country data to database...{style.OFF}")
             name = country_object["name"]
             code = country_object["code"]
             country_id = data_processing.add_country(name, code)
-            print(f"Successfully added country data for '{name}'. (ID: {country_id})")
+            print(f"{style.INFO}Successfully added country data for "
+                  f"'{name}'. (ID: {country_id}){style.OFF}")
         # Add movie to database
-        print(f"Movie details complete. Adding movie to database...")
+        print(f"{style.INFO}Movie details complete. Adding movie to database...{style.OFF}")
         movie_id = data_processing.add_movie(movie_title, year, country_id)
-        print(f"Successfully added '{movie_title}'. (ID: {movie_id})")
+        print(f"{style.INFO}Successfully added '{movie_title}'. (ID: {movie_id}){style.OFF}")
     # -----------------------------------------------------------------
     # Finally ask for the rating and store it in the database.
     rating = ask_for_rating()
     if rating is False:
         return False
     data_processing.add_rating(CURRENT_USER_ID, movie_id, rating)
-    color_on("cyan", False)
-    print(f"Successfully added rating for movie '{movie_title}'.{color_off()}")
+    print(f"{style.INFO}Successfully added rating for movie '{movie_title}'.{style.OFF}")
     return True
 
 
 def delete_movie_rating():
     """Delete a movie rating from the database."""
     data = movie_storage.get_movies()
-    color_on("yellow", False)
     movie_title = ask_for_name()
     # Return early if user wants to cancel.
     if movie_title is False:
         return False
     # Only remove film if it exists.
     if not is_in_movies(data, movie_title):
-        color_on("red", False)
-        print(f"Movie '{movie_title}' doesn't exist!")
+        print(f"{style.ERROR}Movie '{movie_title}' doesn't exist!{style.OFF}")
         # Recurse to start the function again.
         delete_movie_rating()
     else:
         movie_storage.delete_movie(movie_title)
-        color_on("cyan", False)
-        print(f"Movie '{movie_title}' successfully deleted")
+        print(f"{style.INFO}Movie '{movie_title}' successfully deleted{style.OFF}")
     return True
 
 
@@ -375,15 +318,13 @@ def update_movie_rating():
     and update the movie’s rating in the database.
     """
     data = movie_storage.get_movies()
-    color_on("yellow", False)
     movie_title = ask_for_name()
     # Return early if user wants to cancel.
     if movie_title is False:
         return False
     # Check if the film already exists.
     if not is_in_movies(data, movie_title):
-        color_on("red", False)
-        print(f"Movie '{movie_title}' doesn't exist!")
+        print(f"{style.ERROR}Movie '{movie_title}' doesn't exist!{style.OFF}")
         # Recurse to start the function again:
         update_movie_rating()
     else:
@@ -398,8 +339,7 @@ def update_movie_rating():
             return False
         # Update the movie.
         movie_storage.update_movie(title, year, rating)
-        color_on("cyan", False)
-        print(f"Movie '{movie_title}' successfully updated")
+        print(f"{style.INFO}Movie '{movie_title}' successfully updated{style.OFF}")
     return True
 
 
@@ -443,7 +383,6 @@ def get_movie_stats():
     Show average and median rating,
     best and worst movies.
     """
-    color_on("cyan", False)
     # Get the data.
     data = movie_storage.get_movies()
     ratings = get_ratings(data)
@@ -452,7 +391,7 @@ def get_movie_stats():
     best_movies = get_best_or_worst_movies(data)
     worst_movies = get_best_or_worst_movies(data, get_best=False)
     # Show stats...
-    print(f"\nAverage rating: {average_rating}")
+    print(f"{style.OUTPUT}\nAverage rating: {average_rating}")
     print(f"Median rating: {median_rating}")
     # ...and make sure multiple best and worst movies are shown.
     print("Best movie(s): ", end="")
@@ -461,21 +400,21 @@ def get_movie_stats():
                                         data[title]['rating'])
                      for title in best_movies))
     print("Worst movie(s): ", end="")
-    print(" | ".join(format_movie_entry(title,
+    print(f"{' | '.join(format_movie_entry(title,
                                         data[title]['year'],
                                         data[title]['rating'])
-                     for title in worst_movies))
+                     for title in worst_movies)}{style.OFF}")
 
 
 def get_random_movie():
     """Show the details for a random movie."""
-    color_on("cyan", False)
     data = movie_storage.get_movies()
     movie_titles = get_movie_titles(data)
     random_title = random.choice(movie_titles)
     rating = data[random_title]["rating"]
     year = data[random_title]["year"]
-    print(f"\nYour movie for tonight: {random_title} ({year}), it's rated {rating}")
+    print(f"{style.OUTPUT}\nYour movie for tonight: "
+          f"{random_title} ({year}), it's rated {rating}{style.OFF}")
 
 
 def search_movie():
@@ -492,29 +431,30 @@ def search_movie():
     # Return early if user wants to cancel.
     if search_term is False:
         return False
-    color_on("cyan", False)
     found = False
     for title, details in data.items():
         if search_term.lower() in title.lower():
-            print(format_movie_entry(title,
-                                     details['year'],
-                                     details['rating']))
+            print(f"{style.OUTPUT}"
+                  f"{format_movie_entry(title,
+                                        details['year'],
+                                        details['rating'])}"
+                  f"{style.OFF}")
             found = True
     if not found:
-        color_on("cyan", False)
         # suggest titles by fuzzy search
         print()
-        print(f"A movie containing '{search_term}' could not be found.", end="")
+        print(f"{style.INFO}A movie containing '{search_term}' "
+              f"could not be found.{style.OFF}", end="")
         # look for alternatives using fuzzy search
         suggestions = difflib.get_close_matches(search_term, list(data), 4, 0.3)
         # show only if fuzzy search finds alternatives
         if not len(suggestions) == 0:
-            print(" Did you mean:", end="\n")
+            print(f"{style.INFO} Did you mean:{style.OFF}", end="\n")
             for suggestion in suggestions:
                 title = suggestion
                 year = data[suggestion]["year"]
                 rating = data[suggestion]["rating"]
-                print(format_movie_entry(title, year, rating))
+                print(f"{style.OUTPUT}{format_movie_entry(title, year, rating)}{style.OFF}")
     return True
 
 
@@ -575,8 +515,7 @@ def filter_movies():
             year_start,
             year_end,
             rating_threshold), data.items()))
-    color_on("cyan", inline=False)
-    print("\nFiltered Movies:")
+    print(f"{style.OUTPUT}\nFiltered Movies:{style.OFF}")
     # sort movies by year (descending)
     filtered_movies_sorted = dict(sorted(filtered_movies.items(),
                                          key=lambda item: item[1]["year"],
@@ -586,8 +525,7 @@ def filter_movies():
 
 def not_implemented():
     """Dummy function."""
-    color_on("red", False)
-    print("Not implemented")
+    print(f"{style.ERROR}Not implemented{style.OFF}")
 
 
 def do_nothing():
@@ -597,8 +535,7 @@ def do_nothing():
 
 def invalid_choice():
     """Display a message for invalid menu choices."""
-    color_on("red", False)
-    print("\nInvalid choice")
+    print(f"{style.ERROR}\nInvalid choice{style.OFF}")
 
 
 DISPATCH_TABLE = {
@@ -630,14 +567,13 @@ def execute_user_choice(choice):
 
 def say_bye():
     """Print 'Bye!' on exit of the program."""
-    color_on("cyan", False)
-    print("\nBye!\n")
-    color_off(inline=False)
+    print(f"{style.INFO}\nBye!\n{style.OFF}")
 
 
 def main():
     """Main function for testing when running the script under main."""
     pass
+
 
 if __name__ == "__main__":
     main()
