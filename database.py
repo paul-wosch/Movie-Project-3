@@ -119,6 +119,7 @@ def update_rating(params):
 
 
 def main():
+    """Main function for testing when running the script under main."""
     # initialize_database(DB_INIT_QUERIES)
     print(get_country({"id": 1}))
     print(get_country({"name": "Poland"}))
