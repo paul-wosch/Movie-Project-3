@@ -12,14 +12,14 @@ def get_movies(user_id=None):
     if user_id:
         movies = db.get_movies(params)
         movies_dict = {movie[0]: {"year": movie[1],
-                                  "country": movie[2],
+                                  "image_url": movie[2],
                                   "rating": movie[3],
                                   "note": movie[4]}
                        for movie in movies}
     else:
         movies = db.get_movies()
         movies_dict = {movie[0]: {"year": movie[1],
-                                  "country": movie[2]}
+                                  "image_url": movie[2]}
                        for movie in movies}
     return movies_dict
 
@@ -34,8 +34,7 @@ def get_movie(search_value, find_by_id=False) -> dict:
     movie_object = {"id": movie[0],
                     "title": movie[1],
                     "year": movie[2],
-                    "country": movie[3],
-                    "country_id": movie[4]
+                    "image_url": movie[3]
                     }
     return movie_object
 
@@ -63,6 +62,18 @@ def get_country_by_name(name):
     return country_dict
 
 
+def get_countries_for_movie(movie_id):
+    """Return a list of country objects for the given movie id."""
+    params = {"id": movie_id}
+    countries = db.get_countries_for_movie(params)
+    countries_list = [{"id": country[0],
+                       "name": country[1],
+                       "code": country[2],
+                       "flag_url": country[3]
+                       } for country in countries]
+    return countries_list
+
+
 def add_country(name, code):
     """Add country to the database and return the id."""
     params = {"name": name, "code": code}
@@ -70,9 +81,9 @@ def add_country(name, code):
     return get_country_by_name(name)["id"]
 
 
-def add_movie(title, year, country_id):
+def add_movie(title, year, image_url):
     """Add movie to the database and return the id."""
-    params = {"title": title, "year": year, "country_id": country_id}
+    params = {"title": title, "year": year, "image_url": image_url}
     db.add_movie(params)
     return get_movie(title)["id"]
 
@@ -88,10 +99,13 @@ def add_rating(user_id, movie_id, rating, note=""):
 
 
 def main():
-    # print(get_movies(1))
+    """Main function for testing when running the script under main."""
+    # initialize_database(DB_INIT_QUERIES)
+    # print(get_movies())
     # print(get_movie(1, find_by_id=True))
-    print(get_country_by_name("United States"))
-    print(get_country_by_name("Poland"))
+    # print(get_country_by_name("United States"))
+    # print(get_country_by_name("Poland"))
+    # print(get_countries_for_movie(1))
     pass
 
 

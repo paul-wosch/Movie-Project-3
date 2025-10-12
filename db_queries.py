@@ -7,8 +7,9 @@ performing CRUD operations to the database.
 Simplified database structure for the project:
 
     users: id:int (PK), user_name:text (unique), first_name:text, last_name:text, password_hash:text
-    movies: id:int (PK), title:text (unique), year:int, country_id:in (FK)
-    countries: id:int (PK), name:text, code:text
+    movies: id:int (PK), title:text (unique), year:int, image_url
+    countries: id:int (PK), name:text, code:text, flag_url:text
+    movies_countries: movie_id:int (FK), country_id:int (FK)
     ratings: user_id:int (PK, FK), movie_id:int (PK, FK), rating:real, note:text
 """
 
@@ -41,7 +42,13 @@ CREATE_TABLE_MOVIES = """
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         title       TEXT UNIQUE NOT NULL,
         year        INTEGER NOT NULL,
+        image_url   TEXT
+    )"""
+CREATE_TABLE_MOVIES_COUNTRIES = """
+        CREATE TABLE IF NOT EXISTS movies_countries (
+        movie_id    INTEGER,
         country_id  INTEGER,
+        FOREIGN KEY(movie_id) REFERENCES movies(id),
         FOREIGN KEY(country_id) REFERENCES countries(id)
     )"""
 CREATE_TABLE_RATINGS = """
@@ -58,18 +65,22 @@ CREATE_TABLE_RATINGS = """
 # ---------------------------------------------------------------------
 ADD_USER = ""
 ADD_COUNTRY = "INSERT INTO countries (name, code) VALUES (:name, :code)"
-ADD_MOVIE = ("INSERT INTO movies (title, year, country_id)"
-             "VALUES (:title, :year, :country_id)")
+ADD_MOVIE = ("INSERT INTO movies (title, year, image_url)"
+             "VALUES (:title, :year, :image_url)")
 ADD_RATING = ("INSERT INTO ratings (user_id, movie_id, rating, note)"
               "VALUES (:user_id, :movie_id, :rating, :note)")
+ADD_MOVIE_COUNTRY = """
+    INSERT INTO movies_countries (movie_id, country_id)
+    VALUES (:country_id, :country_id)
+"""
 # ---------------------------------------------------------------------
 # READ
 # ---------------------------------------------------------------------
-LIST_MOVIES = """
+GET_MOVIES = """
     SELECT
         movies.title,
         movies.year,
-        countries.name,
+        movies.image_url,
         ratings.rating,
         ratings.note
     FROM ratings
@@ -77,29 +88,22 @@ LIST_MOVIES = """
         users ON ratings.user_id = users.id
     JOIN
         movies ON ratings.movie_id = movies.id
-    JOIN
-        countries ON countries.id = movies.country_id
     WHERE ratings.user_id = :user_id
 """
-LIST_MOVIES_ALL_USERS = """
+GET_MOVIES_ALL_USERS = """
     SELECT
         movies.title,
         movies.year,
-        countries.name
+        movies.image_url
     FROM movies
-    JOIN
-        countries ON countries.id = movies.country_id
 """
 GET_MOVIE_BY_TITLE = """
     SELECT
         movies.id,
         movies.title,
         movies.year,
-        countries.name,
-        countries.id
+        movies.image_url
     FROM movies
-    JOIN
-        countries ON countries.id = movies.country_id
     WHERE movies.title = :title
 """
 GET_MOVIE_BY_ID = """
@@ -107,23 +111,29 @@ GET_MOVIE_BY_ID = """
         movies.id,
         movies.title,
         movies.year,
-        countries.name,
-        countries.id
+        movies.image_url
     FROM movies
-    JOIN
-        countries ON countries.id = movies.country_id
     WHERE movies.id = :id
 """
 GET_COUNTRY_BY_CODE = "SELECT * FROM countries WHERE code = :code"
 GET_COUNTRY_BY_NAME = "SELECT * FROM countries WHERE name = :name"
 GET_COUNTRY_BY_ID = "SELECT * FROM countries WHERE id = :id"
+GET_COUNTRIES_FOR_MOVIE = """
+    SELECT * FROM countries
+    JOIN
+        movies_countries ON movies_countries.country_id = countries.id
+    JOIN
+        movies ON movies_countries.movie_id = movies.id
+    WHERE movies.id = :id
+        
+"""
 # ---------------------------------------------------------------------
 # UPDATE
 # ---------------------------------------------------------------------
 UPDATE_USER = ""
 UPDATE_MOVIE = """
     UPDATE movies 
-    SET title = :title, year = :year, country_id = :country_id
+    SET title = :title, year = :year, image_url = :image_url
     WHERE id = :id
 """
 UPDATE_RATING = """

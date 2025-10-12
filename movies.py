@@ -238,7 +238,7 @@ def ask_for_sort_order():
             print(f"{style.ERROR}Invalid input{style.OFF}")
 
 
-def add_movie_rating():
+def add_movie_rating_manual():
     """Add movie rating to the Database."""
     # -----------------------------------------------------------------
     # Always return early if user wants to cancel / has entered '..'.
@@ -267,6 +267,7 @@ def add_movie_rating():
         year = ask_for_year()
         if year is False:
             return False
+        """ SECTION DISABLED UNTIL FETCHING MOVIE DATA FROM OMDB API IS IMPLEMENTED
         # Get country object.
         country_name = ask_for_country()
         if country_name is False:
@@ -281,9 +282,11 @@ def add_movie_rating():
             country_id = data_processing.add_country(name, code)
             print(f"{style.INFO}Successfully added country data for "
                   f"'{name}'. (ID: {country_id}){style.OFF}")
+        """
         # Add movie to database
+        image_url = "" # temporary blank image_url until omdb API is implemented
         print(f"{style.INFO}Movie details complete. Adding movie to database...{style.OFF}")
-        movie_id = data_processing.add_movie(movie_title, year, country_id)
+        movie_id = data_processing.add_movie(movie_title, year, image_url)
         print(f"{style.INFO}Successfully added '{movie_title}'. (ID: {movie_id}){style.OFF}")
     # -----------------------------------------------------------------
     # Finally ask for the rating and store it in the database.
@@ -541,7 +544,7 @@ def invalid_choice():
 DISPATCH_TABLE = {
     "0": do_nothing,
     "1": list_movies,
-    "2": add_movie_rating,
+    "2": add_movie_rating_manual,
     "3": delete_movie_rating,
     "4": update_movie_rating,
     "5": get_movie_stats,

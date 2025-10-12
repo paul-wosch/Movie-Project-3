@@ -12,6 +12,7 @@ DB_INIT_QUERIES = [
     db_queries.CREATE_TABLE_USERS,
     db_queries.CREATE_TABLE_COUNTRIES,
     db_queries.CREATE_TABLE_MOVIES,
+    db_queries.CREATE_TABLE_MOVIES_COUNTRIES,
     db_queries.CREATE_TABLE_RATINGS
 ]
 
@@ -57,11 +58,11 @@ def get_movies(params=None):
     Include rating information only when querying by user.
     """
     if params:
-        query = db_queries.LIST_MOVIES
+        query = db_queries.GET_MOVIES
         movies = query_database(query, params)
         return movies
     else:
-        query = db_queries.LIST_MOVIES_ALL_USERS
+        query = db_queries.GET_MOVIES_ALL_USERS
         movies = query_database(query, params={})
         return movies
 
@@ -86,6 +87,13 @@ def get_country(params):
         query = db_queries.GET_COUNTRY_BY_NAME
     country = query_database(query, params)
     return country
+
+
+def get_countries_for_movie(params):
+    """Return countries for a given movie id."""
+    query = db_queries.GET_COUNTRIES_FOR_MOVIE
+    countries = query_database(query, params)
+    return countries
 
 
 def add_country(params):
@@ -121,8 +129,7 @@ def update_rating(params):
 def main():
     """Main function for testing when running the script under main."""
     # initialize_database(DB_INIT_QUERIES)
-    print(get_country({"id": 1}))
-    print(get_country({"name": "Poland"}))
+
 
 if __name__ == "__main__":
     main()
