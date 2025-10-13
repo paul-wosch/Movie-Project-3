@@ -286,7 +286,9 @@ def add_movie_rating_manual():
         # Add movie to database
         image_url = "" # temporary blank image_url until omdb API is implemented
         print(f"{style.INFO}Movie details complete. Adding movie to database...{style.OFF}")
-        movie_id = data_processing.add_movie(movie_title, year, image_url)
+        """Add fetched omdb_rating here..."""
+        omdb_rating = 0 # temporarily set to 0 until omdb API is implemented
+        movie_id = data_processing.add_movie(movie_title, year, image_url, omdb_rating)
         print(f"{style.INFO}Successfully added '{movie_title}'. (ID: {movie_id}){style.OFF}")
     # -----------------------------------------------------------------
     # Finally ask for the rating and store it in the database.

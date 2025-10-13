@@ -7,7 +7,7 @@ performing CRUD operations to the database.
 Simplified database structure for the project:
 
     users: id:int (PK), user_name:text (unique), first_name:text, last_name:text, password_hash:text
-    movies: id:int (PK), title:text (unique), year:int, image_url
+    movies: id:int (PK), title:text (unique), year:int, image_url:text, omdb_rating:real
     countries: id:int (PK), name:text, code:text, flag_url:text
     movies_countries: movie_id:int (FK), country_id:int (FK)
     ratings: user_id:int (PK, FK), movie_id:int (PK, FK), rating:real, note:text
@@ -42,7 +42,8 @@ CREATE_TABLE_MOVIES = """
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         title       TEXT UNIQUE NOT NULL,
         year        INTEGER NOT NULL,
-        image_url   TEXT
+        image_url   TEXT,
+        omdb_rating REAL
     )"""
 CREATE_TABLE_MOVIES_COUNTRIES = """
         CREATE TABLE IF NOT EXISTS movies_countries (
@@ -65,8 +66,8 @@ CREATE_TABLE_RATINGS = """
 # ---------------------------------------------------------------------
 ADD_USER = ""
 ADD_COUNTRY = "INSERT INTO countries (name, code) VALUES (:name, :code)"
-ADD_MOVIE = ("INSERT INTO movies (title, year, image_url)"
-             "VALUES (:title, :year, :image_url)")
+ADD_MOVIE = ("INSERT INTO movies (title, year, image_url, omdb_rating)"
+             "VALUES (:title, :year, :image_url, :omdb_rating)")
 ADD_RATING = ("INSERT INTO ratings (user_id, movie_id, rating, note)"
               "VALUES (:user_id, :movie_id, :rating, :note)")
 ADD_MOVIE_COUNTRY = """
@@ -81,6 +82,7 @@ GET_MOVIES = """
         movies.title,
         movies.year,
         movies.image_url,
+        movies.omdb_rating,
         ratings.rating,
         ratings.note
     FROM ratings
@@ -94,7 +96,8 @@ GET_MOVIES_ALL_USERS = """
     SELECT
         movies.title,
         movies.year,
-        movies.image_url
+        movies.image_url,
+        movies.omdb_rating
     FROM movies
 """
 GET_MOVIE_BY_TITLE = """
@@ -102,7 +105,8 @@ GET_MOVIE_BY_TITLE = """
         movies.id,
         movies.title,
         movies.year,
-        movies.image_url
+        movies.image_url,
+        movies.omdb_rating
     FROM movies
     WHERE movies.title = :title
 """
@@ -111,7 +115,8 @@ GET_MOVIE_BY_ID = """
         movies.id,
         movies.title,
         movies.year,
-        movies.image_url
+        movies.image_url,
+        movies.omdb_rating
     FROM movies
     WHERE movies.id = :id
 """
@@ -133,7 +138,7 @@ GET_COUNTRIES_FOR_MOVIE = """
 UPDATE_USER = ""
 UPDATE_MOVIE = """
     UPDATE movies 
-    SET title = :title, year = :year, image_url = :image_url
+    SET title = :title, year = :year, image_url = :image_url, omdb_rating = :omdb_rating
     WHERE id = :id
 """
 UPDATE_RATING = """

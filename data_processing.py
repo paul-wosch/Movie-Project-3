@@ -13,13 +13,15 @@ def get_movies(user_id=None):
         movies = db.get_movies(params)
         movies_dict = {movie[0]: {"year": movie[1],
                                   "image_url": movie[2],
-                                  "rating": movie[3],
-                                  "note": movie[4]}
+                                  "omdb_rating": movie[3],
+                                  "rating": movie[4],
+                                  "note": movie[5]}
                        for movie in movies}
     else:
         movies = db.get_movies()
         movies_dict = {movie[0]: {"year": movie[1],
-                                  "image_url": movie[2]}
+                                  "image_url": movie[2],
+                                  "omdb_rating": movie[3]}
                        for movie in movies}
     return movies_dict
 
@@ -34,7 +36,8 @@ def get_movie(search_value, find_by_id=False) -> dict:
     movie_object = {"id": movie[0],
                     "title": movie[1],
                     "year": movie[2],
-                    "image_url": movie[3]
+                    "image_url": movie[3],
+                    "omdb_rating": movie[4]
                     }
     return movie_object
 
@@ -81,9 +84,12 @@ def add_country(name, code):
     return get_country_by_name(name)["id"]
 
 
-def add_movie(title, year, image_url):
+def add_movie(title, year, image_url, omdb_rating):
     """Add movie to the database and return the id."""
-    params = {"title": title, "year": year, "image_url": image_url}
+    params = {"title": title,
+              "year": year,
+              "image_url": image_url,
+              "omdb_rating": omdb_rating}
     db.add_movie(params)
     return get_movie(title)["id"]
 
