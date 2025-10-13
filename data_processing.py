@@ -3,6 +3,9 @@ from sqlalchemy.exc import SQLAlchemyError
 import database as db
 
 
+# ---------------------------------------------------------------------
+# CRUD OPERATIONS
+# ---------------------------------------------------------------------
 def get_movies(user_id=None):
     """Return a dictionary of movie dictionaries for the given user.
 
@@ -84,6 +87,12 @@ def add_country(name, code):
     return get_country_by_name(name)["id"]
 
 
+def add_movie_country_relationship(movie_id, country_id):
+    """Add movie-country relationship to the database."""
+    params = {"movie_id": movie_id, "country_id": country_id}
+    db.add_movie_country_relationship(params)
+
+
 def add_movie(title, year, image_url, omdb_rating):
     """Add movie to the database and return the id."""
     params = {"title": title,
@@ -104,6 +113,42 @@ def add_rating(user_id, movie_id, rating, note=""):
     db.add_rating(params)
 
 
+# ---------------------------------------------------------------------
+# PROCESS RECEIVED DATA FROM API
+# ---------------------------------------------------------------------
+def std_movie_from_api_search(movie_from_api):
+    """Return a standardized movie object for a movie retrieved from the API."""
+    movie_object = {"title": movie_from_api["Title"],
+                    "year": movie_from_api["Year"],
+                    "imdbID": movie_from_api["imdbID"],
+                    "type": movie_from_api["Type"]
+                    }
+    return movie_object
+
+
+def std_search_results_from_api(results):
+    """Return API search results as a standardized list
+    in reverse chronological order.
+    """
+    if results:
+        return sorted([
+            std_movie_from_api_search(result) for result in results],
+            key=lambda x: x['year'], reverse=True)
+    return []
+
+
+def std_movie_from_api(movie):
+    """Return standardized movie object for a single movie
+    retrieved from the API.
+    """
+    movie_object = {movie["Title"]: {"year": movie["Year"],
+                                     "image_url": movie["Poster"],
+                                     "omdb_rating": movie["imdbRating"],
+                                     "country": movie["Country"].split(", ")
+                                     }}
+    return movie_object
+
+
 def main():
     """Main function for testing when running the script under main."""
     # initialize_database(DB_INIT_QUERIES)
@@ -111,7 +156,7 @@ def main():
     # print(get_movie(1, find_by_id=True))
     # print(get_country_by_name("United States"))
     # print(get_country_by_name("Poland"))
-    # print(get_countries_for_movie(1))
+    # print(get_countries_for_movie(16))
     pass
 
 

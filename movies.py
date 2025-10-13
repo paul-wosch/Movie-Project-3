@@ -6,6 +6,7 @@ from datetime import date
 import movie_storage
 import data_processing
 import cli_style as style
+import api_client as api
 
 # Modify after implementing user management
 DEFAULT_USER_ID = 1
@@ -54,9 +55,17 @@ def show_menu(active="0"):
             print(f"{style.DEFAULT}{entry}{style.OFF}")
 
 
-def get_user_choice():
+def get_user_choice(entries=len(MENU_ENTRIES),
+                    start_at_zero=True,
+                    prompt="Enter choice"):
     """Ask user for their menu choice."""
-    choice = input(f"{style.PROMPT}\nEnter choice (0-{len(MENU_ENTRIES) - 1}): {style.OFF}")
+    if start_at_zero:
+        start = 0
+        end = entries - 1
+    else:
+        start = 1
+        end = entries
+    choice = input(f"{style.PROMPT}{prompt} ({start}-{end}): {style.OFF}")
     return choice
 
 
@@ -102,11 +111,14 @@ def list_movies(*data, nested_call=False):
         print(f"{style.OUTPUT}{format_movie_entry(title, year, rating)}{style.OFF}")
 
 
-def print_action_canceled():
+def print_action_cancelled():
     """Print an information that an action has been canceled."""
     print(f"{style.INFO}Action canceled, returning back to menu...{style.OFF}")
 
 
+# ---------------------------------------------------------------------
+# PROMPTS
+# ---------------------------------------------------------------------
 def ask_for_name():
     """Ask user for the name of a movie and return this value.
 
@@ -118,7 +130,7 @@ def ask_for_name():
         if movie_name == "":
             print(f"{style.ERROR}\nMovie name should not be empty!{style.OFF}")
         elif movie_name == "..":
-            print_action_canceled()
+            print_action_cancelled()
             return False
         else:
             break
@@ -136,7 +148,7 @@ def ask_for_name_part():
         if movie_name == "":
             print(f"{style.ERROR}Movie name or part of it should not be empty!{style.OFF}")
         elif movie_name == "..":
-            print_action_canceled()
+            print_action_cancelled()
             return False
         else:
             break
@@ -158,7 +170,7 @@ def ask_for_rating(allow_blank=False,
                 return None
             # Action should be cancelled.
             if rating == "..":
-                print_action_canceled()
+                print_action_cancelled()
                 return False
             # Rating should be within valid range.
             if not 0 <= float(rating) <= 10:
@@ -187,7 +199,7 @@ def ask_for_year(allow_blank=False,
                 return None
             # Action should be cancelled.
             if year == "..":
-                print_action_canceled()
+                print_action_cancelled()
                 return False
             # Return year if input is valid.
             if date.today().year < int(year):
@@ -215,7 +227,7 @@ def ask_for_country(allow_blank=False,
                 return None
             # Action should be cancelled.
             if country == "..":
-                print_action_canceled()
+                print_action_cancelled()
                 return False
             # Return country name if input is valid.
             return country
@@ -238,7 +250,58 @@ def ask_for_sort_order():
             print(f"{style.ERROR}Invalid input{style.OFF}")
 
 
-def add_movie_rating_manual():
+# ---------------------------------------------------------------------
+# DYNAMIC MOVIE RETRIEVAL AND SELECTION FROM API
+# ---------------------------------------------------------------------
+def list_api_search_results(search_term):
+    """Print retrieved movies from API and return a dispatch table
+    to allow user selection.
+    """
+    results_raw = api.find_movies(search_term)
+    results = data_processing.std_search_results_from_api(results_raw)
+    dispatch_table = {}
+    output = ""
+    for i, movie in enumerate(results, start=1):
+        dispatch_table[str(i)] = (movie["imdbID"], movie["title"])
+        output += (f"{i:>3}: {movie['title']} ({movie['year']}) [{movie['type']}]\n")
+    return output, dispatch_table
+
+
+def select_movie_from_api(search_term):
+    """Return imdbID and title for a specific movie
+    selected from a list of movies automatically retrieved via API.
+    """
+    output, dispatch_table = list_api_search_results(search_term)
+    print(f"{style.INFO}Movies matching the search term "
+          f"'{search_term}':\n{style.OFF}")
+    print(f"{style.INFO}{output}{style.OFF}")
+    while True:
+        choice = get_user_choice(len(dispatch_table),
+                                 start_at_zero=False,
+                                 prompt="Please make your choice")
+        if choice == "..":
+            choice = False
+            print_action_cancelled()
+            break
+        elif is_valid_user_choice(choice, dispatch_table):
+            break
+    if choice:
+        imdbID, title = dispatch_table[choice]
+        return imdbID, title
+    return (False, False)
+
+
+def get_movie_details_from_api(imdbID):
+    """Return movie object for the given imdbID."""
+    movie_object_raw = api.fetch_movie_details(imdbID)
+    movie_object = data_processing.std_movie_from_api(movie_object_raw)
+    return movie_object
+
+
+# ---------------------------------------------------------------------
+# CRUD OPERATIONS
+# ---------------------------------------------------------------------
+def add_movie_rating():
     """Add movie rating to the Database."""
     # -----------------------------------------------------------------
     # Always return early if user wants to cancel / has entered '..'.
@@ -248,48 +311,46 @@ def add_movie_rating_manual():
     if movie_title is False:
         return False
     # -----------------------------------------------------------------
+    # Dynamically retrieve movie suggestions
+    # for the given title via API
+    imdbID, movie_title = select_movie_from_api(movie_title)
+    if movie_title is False:
+        return False
+    # -----------------------------------------------------------------
     # Check if current user already rated the movie.
     if is_in_movies(data_current_user, movie_title):
         print(f"{style.ERROR}You already rated '{movie_title}'!{style.OFF}")
         return False
     # -----------------------------------------------------------------
     # If movie is found in the movies table
-    # skip asking for movie details.
+    # skip fetching movie details.
     if is_in_movies(data_all_users, movie_title):
         # get movie details from database
         movie_details = data_processing.get_movie(movie_title)
         print(f"{style.INFO}Found movie '{movie_title}' in the database.")
-        print(f"Skip prompting for movie details...{style.OFF}")
+        print(f"Skip fetching movie details from OMDB...{style.OFF}")
         movie_id = movie_details["id"]
     # -----------------------------------------------------------------
-    # ...otherwise ask for movie details.
+    # ...otherwise fetch movie details from API.
     else:
-        year = ask_for_year()
-        if year is False:
-            return False
-        """ SECTION DISABLED UNTIL FETCHING MOVIE DATA FROM OMDB API IS IMPLEMENTED
-        # Get country object.
-        country_name = ask_for_country()
-        if country_name is False:
-            return False
-        country_object = data_processing.get_country_by_name(country_name)
-        country_id = country_object["id"]
-        # For temporary id (-1) add country to database.
-        if country_id == -1:
-            print(f"{style.INFO}Adding country data to database...{style.OFF}")
-            name = country_object["name"]
-            code = country_object["code"]
-            country_id = data_processing.add_country(name, code)
-            print(f"{style.INFO}Successfully added country data for "
-                  f"'{name}'. (ID: {country_id}){style.OFF}")
-        """
-        # Add movie to database
-        image_url = "" # temporary blank image_url until omdb API is implemented
+        movie_obj = get_movie_details_from_api(imdbID)[movie_title]
+        print(movie_obj)
+        year = movie_obj["year"]
+        image_url = movie_obj["image_url"]
+        omdb_rating = movie_obj["omdb_rating"]
+        countries = movie_obj["country"]
         print(f"{style.INFO}Movie details complete. Adding movie to database...{style.OFF}")
-        """Add fetched omdb_rating here..."""
-        omdb_rating = 0 # temporarily set to 0 until omdb API is implemented
+        # Add movie to the database.
         movie_id = data_processing.add_movie(movie_title, year, image_url, omdb_rating)
         print(f"{style.INFO}Successfully added '{movie_title}'. (ID: {movie_id}){style.OFF}")
+        # Finally add new country objects to the database...
+        # ...and create movie-country relationships.
+        print(f"{style.INFO}Processing country details...{style.OFF}")
+        for country in countries:
+            add_country_if_new(country)
+            country_id = data_processing.get_country_by_name(country)["id"]
+            data_processing.add_movie_country_relationship(movie_id, country_id)
+            print(f"{style.INFO}Successfully created movie-country relationship for '{country}'.{style.OFF}")
     # -----------------------------------------------------------------
     # Finally ask for the rating and store it in the database.
     rating = ask_for_rating()
@@ -298,6 +359,25 @@ def add_movie_rating_manual():
     data_processing.add_rating(CURRENT_USER_ID, movie_id, rating)
     print(f"{style.INFO}Successfully added rating for movie '{movie_title}'.{style.OFF}")
     return True
+
+
+def add_country_if_new(country_name):
+    """Add the given country object to the database
+    and return its id.
+    """
+    country_object = data_processing.get_country_by_name(country_name)
+    country_id = country_object["id"]
+    # Only new countries receive a temporary id (-1)
+    # should be added to the database.
+    if country_id == -1:
+        print(f"{style.INFO}Adding country data to database...{style.OFF}")
+        name = country_object["name"]
+        code = country_object["code"]
+        country_id = data_processing.add_country(name, code)
+        print(f"{style.INFO}Successfully added country data for "
+              f"'{name}'. (ID: {country_id}){style.OFF}")
+        return country_id
+    return False
 
 
 def delete_movie_rating():
@@ -540,13 +620,13 @@ def do_nothing():
 
 def invalid_choice():
     """Display a message for invalid menu choices."""
-    print(f"{style.ERROR}\nInvalid choice{style.OFF}")
+    print(f"{style.ERROR}Invalid choice{style.OFF}")
 
 
 DISPATCH_TABLE = {
     "0": do_nothing,
     "1": list_movies,
-    "2": add_movie_rating_manual,
+    "2": add_movie_rating,
     "3": delete_movie_rating,
     "4": update_movie_rating,
     "5": get_movie_stats,
@@ -561,13 +641,21 @@ DISPATCH_TABLE = {
 def execute_user_choice(choice):
     """Execute a function for the corresponding user choice.
 
-    Return False if the choice was invalid, otherwise True
+    Return False if the choice was invalid, otherwise True.
     """
     if not DISPATCH_TABLE.get(choice):
         invalid_choice()
         return False
     DISPATCH_TABLE[choice]()
     return True
+
+
+def is_valid_user_choice(choice, dispatch_table):
+    """Return user choice if it's a member of a given dispatch table."""
+    if not dispatch_table.get(choice):
+        invalid_choice()
+        return False
+    return choice
 
 
 def say_bye():

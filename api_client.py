@@ -1,0 +1,56 @@
+"""Provide API connection(s) and fetch data from online services."""
+import requests
+from dotenv import dotenv_values
+
+import cli_style as style
+
+OMDB_API_KEY = dotenv_values(".env").get("OMDB_API_KEY", None)
+OMDB_BASE_URL = "http://www.omdbapi.com/"
+HEADERS = {}
+TIMEOUT = 4
+
+
+def retrieve_data_from_api(base_url,
+                           endpoint="",
+                           headers=None,
+                           payload=None) -> requests.Response | None:
+    """Return response from REST API for given endpoint and payload."""
+    url = base_url + endpoint
+    try:
+        return requests.get(url, headers=headers, params=payload, timeout=TIMEOUT)
+    except requests.exceptions.Timeout:
+        print(f"{style.ERROR}Request to {url} timed out{style.OFF}")
+    return None
+
+
+def fetch_omdb_api(payload):
+    """Fetch data from the OMDB API."""
+    payload["apikey"] = OMDB_API_KEY
+    return retrieve_data_from_api(OMDB_BASE_URL, payload=payload)
+
+
+def find_movies(search_string):
+    """Return a list of movie objects for the given search string."""
+    payload = {"s": search_string.lower()}
+    response = fetch_omdb_api(payload)
+    if response:
+        return response.json()["Search"]
+    return []
+
+
+def fetch_movie_details(imdbID):
+    """Return a movie object for the given imdbID."""
+    payload = {"i": imdbID}
+    response = fetch_omdb_api(payload)
+    if response:
+        return response.json()
+    return False
+
+
+def main():
+    """Main function for testing when running the script under main."""
+    pass
+
+
+if __name__ == "__main__":
+    main()

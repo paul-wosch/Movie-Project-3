@@ -72,7 +72,7 @@ ADD_RATING = ("INSERT INTO ratings (user_id, movie_id, rating, note)"
               "VALUES (:user_id, :movie_id, :rating, :note)")
 ADD_MOVIE_COUNTRY = """
     INSERT INTO movies_countries (movie_id, country_id)
-    VALUES (:country_id, :country_id)
+    VALUES (:movie_id, :country_id)
 """
 # ---------------------------------------------------------------------
 # READ

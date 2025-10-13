@@ -102,6 +102,12 @@ def add_country(params):
     modify_database(query, params)
 
 
+def add_movie_country_relationship(params):
+    """Add movie-country relationship to movies_countries table."""
+    query = db_queries.ADD_MOVIE_COUNTRY
+    modify_database(query, params)
+
+
 def add_rating(params):
     """Add rating to the ratings table."""
     query = db_queries.ADD_RATING
