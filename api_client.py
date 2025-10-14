@@ -4,9 +4,14 @@ from dotenv import dotenv_values
 
 import cli_style as style
 
+# OMDB
 OMDB_API_KEY = dotenv_values(".env").get("OMDB_API_KEY", None)
 OMDB_BASE_URL = "http://www.omdbapi.com/"
-HEADERS = {}
+# API Ninjas
+AN_API_KEY = dotenv_values(".env").get("API_NINJAS_KEY", None)
+AN_BASE_URL = "https://api.api-ninjas.com/v1/"
+AN_HEADERS = {"X-Api-Key": AN_API_KEY}
+
 TIMEOUT = 4
 
 
@@ -29,6 +34,13 @@ def fetch_omdb_api(payload):
     return retrieve_data_from_api(OMDB_BASE_URL, payload=payload)
 
 
+def fetch_api_ninjas(payload, endpoint):
+    """Fetch data from the API Ninjas."""
+    payload["apikey"] = AN_API_KEY
+    url = AN_BASE_URL + endpoint
+    return retrieve_data_from_api(url, payload=payload, headers=AN_HEADERS)
+
+
 def find_movies(search_string):
     """Return a list of movie objects for the given search string."""
     payload = {"s": search_string.lower()}
@@ -44,6 +56,18 @@ def fetch_movie_details(imdbID):
     response = fetch_omdb_api(payload)
     if response:
         return response.json()
+    return False
+
+
+# It seems that the flag emoji looks much nicer than the svg
+# for display in a future html web page.
+def get_country_flag_url(country_code):
+    """Return the country flag url for the given country code."""
+    endpoint = "countryflag"
+    payload = {"country": country_code}
+    response = fetch_api_ninjas(payload, endpoint=endpoint)
+    if response:
+        return response.json()["rectangle_image_url"]
     return False
 
 
