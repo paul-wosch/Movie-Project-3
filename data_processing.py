@@ -45,25 +45,35 @@ def get_movie(search_value, find_by_id=False) -> dict:
     return movie_object
 
 
-def get_country_by_name(name):
+def get_country_by_name(search_string):
     """Return a country object for the given search value."""
-    params = {"name": name}
-    country = db.get_country(params)
     # Retrieve country object from database...
+    params = {"name": search_string}
+    country = db.get_country(params)
     if country:
         country = country[0]
-        country_dict = {"id": country[0],
-                        "name": country[1],
-                        "code": country[2]
+        # Extract attributes
+        id = country[0]
+        name = country[1]
+        code = country[2]
+        emoji = pycountry.countries.get(alpha_2=code).flag
+        country_dict = {"id": id,
+                        "name": name,
+                        "code": code,
+                        "emoji": emoji
                         }
     # ...or generate a new one using the 'pycountry' module.
     else:
+        country = pycountry.countries.lookup(search_string)
         # Use temporary id to tag newly generated country object.
         temp_id = -1
-        country = pycountry.countries.lookup(name)
+        name = country.name
+        code = country.alpha_2
+        emoji = country.flag
         country_dict = {"id": temp_id,
-                        "name": country.name,
-                        "code": country.alpha_2
+                        "name": name,
+                        "code": code,
+                        "emoji": emoji
                         }
     return country_dict
 
@@ -157,6 +167,10 @@ def main():
     # print(get_country_by_name("United States"))
     # print(get_country_by_name("Poland"))
     # print(get_countries_for_movie(16))
+    # country flag lookup
+    # print(pycountry.countries.lookup("United States"))
+    # Country(alpha_2='US', alpha_3='USA', flag='🇺🇸', name='United States', numeric='840', official_name='United States of America')
+    # print(pycountry.countries.lookup("United States").flag)
     pass
 
 
