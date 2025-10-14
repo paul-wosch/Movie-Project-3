@@ -16,7 +16,7 @@ def get_movies(user_id=None):
         movies = db.get_movies(params)
         movies_dict = {movie[0]: {"year": movie[1],
                                   "image_url": movie[2],
-                                  "omdb_rating": movie[3],
+                                  "imdb_rating": movie[3],
                                   "rating": movie[4],
                                   "note": movie[5]}
                        for movie in movies}
@@ -24,7 +24,7 @@ def get_movies(user_id=None):
         movies = db.get_movies()
         movies_dict = {movie[0]: {"year": movie[1],
                                   "image_url": movie[2],
-                                  "omdb_rating": movie[3]}
+                                  "imdb_rating": movie[3]}
                        for movie in movies}
     return movies_dict
 
@@ -40,7 +40,7 @@ def get_movie(search_value, find_by_id=False) -> dict:
                     "title": movie[1],
                     "year": movie[2],
                     "image_url": movie[3],
-                    "omdb_rating": movie[4]
+                    "imdb_rating": movie[4]
                     }
     return movie_object
 
@@ -104,12 +104,12 @@ def add_movie_country_relationship(movie_id, country_id):
     db.add_movie_country_relationship(params)
 
 
-def add_movie(title, year, image_url, omdb_rating):
+def add_movie(title, year, image_url, imdb_rating):
     """Add movie to the database and return the id."""
     params = {"title": title,
               "year": year,
               "image_url": image_url,
-              "omdb_rating": omdb_rating}
+              "imdb_rating": imdb_rating}
     db.add_movie(params)
     return get_movie(title)["id"]
 
@@ -154,7 +154,7 @@ def std_movie_from_api(movie):
     """
     movie_object = {movie["Title"]: {"year": movie["Year"],
                                      "image_url": movie["Poster"],
-                                     "omdb_rating": movie["imdbRating"],
+                                     "imdb_rating": movie["imdbRating"],
                                      "country": movie["Country"].split(", ")
                                      }}
     return movie_object

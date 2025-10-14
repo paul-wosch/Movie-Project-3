@@ -339,14 +339,14 @@ def add_movie_rating():
         print(movie_obj)
         year = movie_obj["year"]
         image_url = movie_obj["image_url"]
-        omdb_rating = movie_obj["omdb_rating"]
+        imdb_rating = movie_obj["imdb_rating"]
         countries = movie_obj["country"]
         cprint_info("Movie details complete. Adding movie to database...")
         # Add movie to the database.
         movie_id = data_processing.add_movie(movie_title,
                                              year,
                                              image_url,
-                                             omdb_rating)
+                                             imdb_rating)
         cprint_info(f"Successfully added '{movie_title}'. (ID: {movie_id})")
         # Finally add new country objects to the database...
         # ...and create movie-country relationships.
