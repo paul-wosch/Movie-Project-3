@@ -5,7 +5,12 @@ from datetime import date
 
 import movie_storage
 import data_processing
-import cli_style as style
+from cli_style import (cprint_default,
+                       cprint_info,
+                       cprint_error,
+                       cprint_output,
+                       cprint_active,
+                       cprompt)
 import api_client as api
 
 # Modify after implementing user management
@@ -42,17 +47,16 @@ class RatingOutOfRangeError(BaseException):
 def show_menu(active="0"):
     """Display the main menu with different options
     and ask for user's choice."""
-    style.color_on("green", False)
     # Display the heading always with the menu.
-    print("********** My Movies Database **********\n")
-    print("Menu:")
+    cprint_default("********** My Movies Database **********\n")
+    cprint_default("Menu:")
     # Build the menu entries from a list of menu items.
     for i, entry in enumerate(MENU_ENTRIES):
         # Check if menu item is active and change color accordingly.
         if int(active) == i and int(active) != 0:
-            print(f"{style.ACTIVE}{entry}{style.OFF}")
+            cprint_active(entry)
         else:
-            print(f"{style.DEFAULT}{entry}{style.OFF}")
+            cprint_default(entry)
 
 
 def get_user_choice(entries=len(MENU_ENTRIES),
@@ -65,13 +69,13 @@ def get_user_choice(entries=len(MENU_ENTRIES),
     else:
         start = 1
         end = entries
-    choice = input(f"{style.PROMPT}{prompt} ({start}-{end}): {style.OFF}")
+    choice = cprompt(f"\n{prompt} ({start}-{end}): ")
     return choice
 
 
 def wait_for_enter_key():
     """Stop the program until user hits enter key."""
-    input(f"{style.PROMPT}\nPress enter key to continue.\n{style.OFF}")
+    cprompt("\nPress enter key to continue.\n")
 
 
 def get_movie_titles(data):
@@ -100,7 +104,7 @@ def list_movies(*data, nested_call=False):
     print()
     if not nested_call:
         data = data_processing.get_movies(user_id=user_id)
-        print(f"{style.OUTPUT}{len(data)} movies in total:\n{style.OFF}")
+        cprint_output(f"{len(data)} movies in total:\n")
     else:
         # Because we passed the data as an optional argument...
         # ...we need to unpack tuple of one element.
@@ -108,12 +112,12 @@ def list_movies(*data, nested_call=False):
     for title, details in data.items():
         year = details["year"]
         rating = details["rating"]
-        print(f"{style.OUTPUT}{format_movie_entry(title, year, rating)}{style.OFF}")
+        cprint_output(f"{format_movie_entry(title, year, rating)}")
 
 
 def print_action_cancelled():
     """Print an information that an action has been canceled."""
-    print(f"{style.INFO}Action canceled, returning back to menu...{style.OFF}")
+    cprint_info("Action canceled, returning back to menu...")
 
 
 # ---------------------------------------------------------------------
@@ -125,10 +129,9 @@ def ask_for_name():
     Return early when user wants to cancel and '..' is entered.
     """
     while True:
-        movie_name = input(f"{style.PROMPT}\nEnter the movie name "
-                           f"or '..' to cancel: {style.OFF}").strip()
+        movie_name = cprompt("\nEnter the movie name or '..' to cancel: ")
         if movie_name == "":
-            print(f"{style.ERROR}\nMovie name should not be empty!{style.OFF}")
+            cprint_error("\nMovie name should not be empty!")
         elif movie_name == "..":
             print_action_cancelled()
             return False
@@ -143,10 +146,10 @@ def ask_for_name_part():
     Return early when user wants to cancel and '..' is entered.
     """
     while True:
-        movie_name = input(f"{style.PROMPT}\nEnter movie name, a part of it "
-                           f"or '..' to cancel: {style.OFF}").strip()
+        movie_name = cprompt("\nEnter movie name, a part of it or "
+                             "'..' to cancel: ")
         if movie_name == "":
-            print(f"{style.ERROR}Movie name or part of it should not be empty!{style.OFF}")
+            cprint_error("Movie name or part of it should not be empty!")
         elif movie_name == "..":
             print_action_cancelled()
             return False
@@ -164,7 +167,7 @@ def ask_for_rating(allow_blank=False,
     """
     while True:
         try:
-            rating = input(f"{style.PROMPT}{prompt}{style.OFF}").strip()
+            rating = cprompt(prompt)
             # For function calls that allow blank input.
             if allow_blank and rating == "":
                 return None
@@ -177,9 +180,9 @@ def ask_for_rating(allow_blank=False,
                 raise RatingOutOfRangeError
             return float(rating)
         except ValueError:
-            print(f"{style.ERROR}Invalid input{style.OFF}")
+            cprint_error("Invalid input")
         except RatingOutOfRangeError:
-            print(f"{style.ERROR}Rating must be between 0 and 10 (inclusive).{style.OFF}")
+            cprint_error("Rating must be between 0 and 10 (inclusive).")
 
 
 def ask_for_year(allow_blank=False,
@@ -193,7 +196,7 @@ def ask_for_year(allow_blank=False,
     while True:
         error_msg = "Invalid input"
         try:
-            year = input(f"{style.PROMPT}{prompt}{style.OFF}").strip()
+            year = cprompt(prompt)
             # For function calls that allow blank input.
             if allow_blank and year == "":
                 return None
@@ -207,7 +210,7 @@ def ask_for_year(allow_blank=False,
                 raise InvalidYearError
             return int(year)
         except (ValueError, InvalidYearError):
-            print(f"{style.ERROR}error_msg{style.OFF}")
+            cprint_error(error_msg)
 
 
 def ask_for_country(allow_blank=False,
@@ -221,7 +224,7 @@ def ask_for_country(allow_blank=False,
     while True:
         error_msg = "Invalid input"
         try:
-            country = input(f"{style.PROMPT}{prompt}{style.OFF}").strip()
+            country = cprompt(prompt)
             # For function calls that allow blank input.
             if allow_blank and country == "":
                 return None
@@ -232,7 +235,7 @@ def ask_for_country(allow_blank=False,
             # Return country name if input is valid.
             return country
         except ValueError:
-            print(f"{style.ERROR}error_msg{style.OFF}")
+            cprint_error(error_msg)
 
 
 def ask_for_sort_order():
@@ -240,14 +243,14 @@ def ask_for_sort_order():
     accepted_input = {"first", "last"}
     while True:
         try:
-            sort_order = input(f"{style.PROMPT}Do you want to see the "
-                               "latest movies first or last?"
-                               f"\nEnter 'first' or 'last: {style.OFF}").strip().lower()
+            prompt = ("Do you want to see the latest movies first or last?"
+                      "\nEnter 'first' or 'last: ")
+            sort_order = cprompt(prompt).lower()
             if not sort_order in accepted_input:
                 raise InvalidInputError
             return sort_order
         except (ValueError, InvalidInputError):
-            print(f"{style.ERROR}Invalid input{style.OFF}")
+            cprint_error("Invalid input")
 
 
 # ---------------------------------------------------------------------
@@ -263,7 +266,7 @@ def list_api_search_results(search_term):
     output = ""
     for i, movie in enumerate(results, start=1):
         dispatch_table[str(i)] = (movie["imdbID"], movie["title"])
-        output += (f"{i:>3}: {movie['title']} ({movie['year']}) [{movie['type']}]\n")
+        output += (f"\n{i:>3}: {movie['title']} ({movie['year']}) [{movie['type']}]")
     return output, dispatch_table
 
 
@@ -272,9 +275,8 @@ def select_movie_from_api(search_term):
     selected from a list of movies automatically retrieved via API.
     """
     output, dispatch_table = list_api_search_results(search_term)
-    print(f"{style.INFO}Movies matching the search term "
-          f"'{search_term}':\n{style.OFF}")
-    print(f"{style.INFO}{output}{style.OFF}")
+    cprint_output(f"\nMovies matching the search term '{search_term}':")
+    cprint_output(output)
     while True:
         choice = get_user_choice(len(dispatch_table),
                                  start_at_zero=False,
@@ -319,7 +321,7 @@ def add_movie_rating():
     # -----------------------------------------------------------------
     # Check if current user already rated the movie.
     if is_in_movies(data_current_user, movie_title):
-        print(f"{style.ERROR}You already rated '{movie_title}'!{style.OFF}")
+        cprint_error(f"You already rated '{movie_title}'!")
         return False
     # -----------------------------------------------------------------
     # If movie is found in the movies table
@@ -327,8 +329,8 @@ def add_movie_rating():
     if is_in_movies(data_all_users, movie_title):
         # get movie details from database
         movie_details = data_processing.get_movie(movie_title)
-        print(f"{style.INFO}Found movie '{movie_title}' in the database.")
-        print(f"Skip fetching movie details from OMDB...{style.OFF}")
+        cprint_info(f"Found movie '{movie_title}' in the database.")
+        cprint_info("Skip fetching movie details from OMDB...")
         movie_id = movie_details["id"]
     # -----------------------------------------------------------------
     # ...otherwise fetch movie details from API.
@@ -339,25 +341,29 @@ def add_movie_rating():
         image_url = movie_obj["image_url"]
         omdb_rating = movie_obj["omdb_rating"]
         countries = movie_obj["country"]
-        print(f"{style.INFO}Movie details complete. Adding movie to database...{style.OFF}")
+        cprint_info("Movie details complete. Adding movie to database...")
         # Add movie to the database.
-        movie_id = data_processing.add_movie(movie_title, year, image_url, omdb_rating)
-        print(f"{style.INFO}Successfully added '{movie_title}'. (ID: {movie_id}){style.OFF}")
+        movie_id = data_processing.add_movie(movie_title,
+                                             year,
+                                             image_url,
+                                             omdb_rating)
+        cprint_info(f"Successfully added '{movie_title}'. (ID: {movie_id})")
         # Finally add new country objects to the database...
         # ...and create movie-country relationships.
-        print(f"{style.INFO}Processing country details...{style.OFF}")
+        cprint_info("Processing country details...")
         for country in countries:
             add_country_if_new(country)
             country_id = data_processing.get_country_by_name(country)["id"]
             data_processing.add_movie_country_relationship(movie_id, country_id)
-            print(f"{style.INFO}Successfully created movie-country relationship for '{country}'.{style.OFF}")
+            cprint_info(f"Successfully created movie-country "
+                        f"relationship for '{country}'.")
     # -----------------------------------------------------------------
     # Finally ask for the rating and store it in the database.
     rating = ask_for_rating()
     if rating is False:
         return False
     data_processing.add_rating(CURRENT_USER_ID, movie_id, rating)
-    print(f"{style.INFO}Successfully added rating for movie '{movie_title}'.{style.OFF}")
+    cprint_info(f"Successfully added rating for movie '{movie_title}'.")
     return True
 
 
@@ -370,12 +376,12 @@ def add_country_if_new(country_name):
     # Only new countries receive a temporary id (-1)
     # should be added to the database.
     if country_id == -1:
-        print(f"{style.INFO}Adding country data to database...{style.OFF}")
+        cprint_info("Adding country data to database...")
         name = country_object["name"]
         code = country_object["code"]
         country_id = data_processing.add_country(name, code)
-        print(f"{style.INFO}Successfully added country data for "
-              f"'{name}'. (ID: {country_id}){style.OFF}")
+        cprint_info(f"Successfully added country data for"
+                    f" '{name}'. (ID: {country_id}")
         return country_id
     return False
 
@@ -389,12 +395,12 @@ def delete_movie_rating():
         return False
     # Only remove film if it exists.
     if not is_in_movies(data, movie_title):
-        print(f"{style.ERROR}Movie '{movie_title}' doesn't exist!{style.OFF}")
+        cprint_error(f"Movie '{movie_title}' doesn't exist!")
         # Recurse to start the function again.
         delete_movie_rating()
     else:
         movie_storage.delete_movie(movie_title)
-        print(f"{style.INFO}Movie '{movie_title}' successfully deleted{style.OFF}")
+        cprint_info(f"Movie '{movie_title}' successfully deleted")
     return True
 
 
@@ -409,7 +415,7 @@ def update_movie_rating():
         return False
     # Check if the film already exists.
     if not is_in_movies(data, movie_title):
-        print(f"{style.ERROR}Movie '{movie_title}' doesn't exist!{style.OFF}")
+        cprint_error(f"Movie '{movie_title}' doesn't exist!")
         # Recurse to start the function again:
         update_movie_rating()
     else:
@@ -424,7 +430,7 @@ def update_movie_rating():
             return False
         # Update the movie.
         movie_storage.update_movie(title, year, rating)
-        print(f"{style.INFO}Movie '{movie_title}' successfully updated{style.OFF}")
+        cprint_info(f"Movie '{movie_title}' successfully updated")
     return True
 
 
@@ -476,19 +482,19 @@ def get_movie_stats():
     best_movies = get_best_or_worst_movies(data)
     worst_movies = get_best_or_worst_movies(data, get_best=False)
     # Show stats...
-    print(f"{style.OUTPUT}\nAverage rating: {average_rating}")
-    print(f"Median rating: {median_rating}")
+    cprint_output(f"\nAverage rating: {average_rating}")
+    cprint_output(f"Median rating: {median_rating}")
     # ...and make sure multiple best and worst movies are shown.
-    print("Best movie(s): ", end="")
-    print(" | ".join(format_movie_entry(title,
-                                        data[title]['year'],
-                                        data[title]['rating'])
+    cprint_output("Best movie(s): ", end="")
+    cprint_output(" | ".join(format_movie_entry(title,
+                                                data[title]['year'],
+                                                data[title]['rating'])
                      for title in best_movies))
-    print("Worst movie(s): ", end="")
-    print(f"{' | '.join(format_movie_entry(title,
-                                        data[title]['year'],
-                                        data[title]['rating'])
-                     for title in worst_movies)}{style.OFF}")
+    cprint_output("Worst movie(s): ", end="")
+    cprint_output(f"{' | '.join(format_movie_entry(title,
+                                                   data[title]['year'],
+                                                   data[title]['rating'])
+                     for title in worst_movies)}")
 
 
 def get_random_movie():
@@ -498,8 +504,8 @@ def get_random_movie():
     random_title = random.choice(movie_titles)
     rating = data[random_title]["rating"]
     year = data[random_title]["year"]
-    print(f"{style.OUTPUT}\nYour movie for tonight: "
-          f"{random_title} ({year}), it's rated {rating}{style.OFF}")
+    cprint_output(f"\nYour movie for tonight: "
+          f"{random_title} ({year}), it's rated {rating}")
 
 
 def search_movie():
@@ -519,27 +525,26 @@ def search_movie():
     found = False
     for title, details in data.items():
         if search_term.lower() in title.lower():
-            print(f"{style.OUTPUT}"
-                  f"{format_movie_entry(title,
-                                        details['year'],
-                                        details['rating'])}"
-                  f"{style.OFF}")
+            cprint_output(f"{format_movie_entry(title,
+                                                details['year'],
+                                                details['rating'])}")
             found = True
     if not found:
         # suggest titles by fuzzy search
         print()
-        print(f"{style.INFO}A movie containing '{search_term}' "
-              f"could not be found.{style.OFF}", end="")
+        cprint_info(f"A movie containing '{search_term}' "
+                    f"could not be found.", end="")
+
         # look for alternatives using fuzzy search
         suggestions = difflib.get_close_matches(search_term, list(data), 4, 0.3)
         # show only if fuzzy search finds alternatives
         if not len(suggestions) == 0:
-            print(f"{style.INFO} Did you mean:{style.OFF}", end="\n")
+            cprint_info(" Did you mean: ", end="\n")
             for suggestion in suggestions:
                 title = suggestion
                 year = data[suggestion]["year"]
                 rating = data[suggestion]["rating"]
-                print(f"{style.OUTPUT}{format_movie_entry(title, year, rating)}{style.OFF}")
+                cprint_output(format_movie_entry(title, year, rating))
     return True
 
 
@@ -600,7 +605,7 @@ def filter_movies():
             year_start,
             year_end,
             rating_threshold), data.items()))
-    print(f"{style.OUTPUT}\nFiltered Movies:{style.OFF}")
+    cprint_output("\nFiltered Movies:")
     # sort movies by year (descending)
     filtered_movies_sorted = dict(sorted(filtered_movies.items(),
                                          key=lambda item: item[1]["year"],
@@ -610,7 +615,7 @@ def filter_movies():
 
 def not_implemented():
     """Dummy function."""
-    print(f"{style.ERROR}Not implemented{style.OFF}")
+    cprint_error("Not implemented")
 
 
 def do_nothing():
@@ -620,7 +625,7 @@ def do_nothing():
 
 def invalid_choice():
     """Display a message for invalid menu choices."""
-    print(f"{style.ERROR}Invalid choice{style.OFF}")
+    cprint_error("Invalid choice")
 
 
 DISPATCH_TABLE = {
@@ -660,7 +665,7 @@ def is_valid_user_choice(choice, dispatch_table):
 
 def say_bye():
     """Print 'Bye!' on exit of the program."""
-    print(f"{style.INFO}\nBye!\n{style.OFF}")
+    cprint_info("\nBye!\n")
 
 
 def main():

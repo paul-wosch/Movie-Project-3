@@ -1,9 +1,9 @@
-"""Make the cli output more appealing
+"""Make the CLI more appealing with colored text output
 
 Main features:
 - colored text
 - clear screen
-- print dividers
+- print dividers (to be implemented)
 
 Tag based use for inline text (no extra print statement):
 - in an f string use as follows
@@ -14,6 +14,14 @@ Alternative (old) way to use:
 - color_on(color_name)
 - color_off()
 - create a new line with optional argument inline=False
+
+Recommended use:
+- dedicated functions for each style tag
+- cprint_info, cprint_error etc.
+- cprompt for user input
+
+Any of the above methods can be combined as needed,
+depending on the use case.
 """
 import os
 
@@ -53,10 +61,63 @@ def color_off(inline=True):
     return "\033[0m"
 
 
+# ---------------------------------------------------------------------
+# CUSTOM FUNCTIONS FOR COLORED TEXT OUTPUT
+# ---------------------------------------------------------------------
+DEFAULT = color_on("green")
 INFO = color_on("cyan")
 ERROR = color_on("red")
-PROMPT = color_on("yellow")
-DEFAULT = color_on("green")
-OUTPUT = color_on("cyan")
+OUTPUT = color_on("blue")
 ACTIVE = color_on("purple")
+PROMPT = color_on("yellow")
 OFF = color_off()
+
+
+# ---------------------------------------------------------------------
+# CUSTOM FUNCTIONS FOR COLORED TEXT OUTPUT
+# ---------------------------------------------------------------------
+def cprint_default(text, **kwargs):
+    """Print the given text with style 'DEFAULT'."""
+    print(f"{DEFAULT}{text}{OFF}", **kwargs)
+
+
+def cprint_info(text, **kwargs):
+    """Print the given text with style 'INFO'."""
+    print(f"{INFO}{text}{OFF}", **kwargs)
+
+
+def cprint_error(text, **kwargs):
+    """Print the given text with style 'ERROR'."""
+    print(f"{ERROR}{text}{OFF}", **kwargs)
+
+
+def cprint_output(text, **kwargs):
+    """Print the given text with style 'OUTPUT'."""
+    print(f"{OUTPUT}{text}{OFF}", **kwargs)
+
+
+def cprint_active(text, **kwargs):
+    """Print the given text with style 'ACTIVE'."""
+    print(f"{ACTIVE}{text}{OFF}", **kwargs)
+
+
+def cprompt(text, strip=True):
+    """Prompt the given text with style 'PROMPT'.
+
+    Set argument 'strip' to False,
+    if you want to deactivate white space stripping.
+    """
+    prompt = input(f"{PROMPT}{text}{OFF}")
+    if strip:
+        return prompt.strip()
+    else:
+        return prompt
+
+
+def main():
+    """Main function for testing when running the script under main."""
+    pass
+
+
+if __name__ == "__main__":
+    main()
