@@ -85,7 +85,8 @@ def get_countries_for_movie(movie_id):
     countries_list = [{"id": country[0],
                        "name": country[1],
                        "code": country[2],
-                       "flag_url": country[3]
+                       "flag_url": country[3],
+                       "emoji": pycountry.countries.get(alpha_2=country[2]).flag
                        } for country in countries]
     return countries_list
 
