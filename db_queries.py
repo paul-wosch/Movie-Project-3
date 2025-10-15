@@ -132,6 +132,10 @@ GET_COUNTRIES_FOR_MOVIE = """
     WHERE movies.id = :id
         
 """
+GET_RATING = """
+    SELECT * FROM ratings
+    WHERE user_id = :user_id AND movie_id = :movie_id
+"""
 # ---------------------------------------------------------------------
 # UPDATE
 # ---------------------------------------------------------------------

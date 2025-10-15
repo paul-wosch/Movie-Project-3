@@ -77,6 +77,12 @@ def get_movie(params):
     return movie
 
 
+def add_movie(params):
+    """Add movie to the movies table."""
+    query = db_queries.ADD_MOVIE
+    modify_database(query, params)
+
+
 def get_country(params):
     """Return country object from the countries table."""
     if params.get("id"):
@@ -114,10 +120,11 @@ def add_rating(params):
     modify_database(query, params)
 
 
-def add_movie(params):
-    """Add movie to the movies table."""
-    query = db_queries.ADD_MOVIE
-    modify_database(query, params)
+def get_rating(params):
+    """Return a single rating from the ratings table."""
+    query = db_queries.GET_RATING
+    rating =  query_database(query, params)
+    return rating
 
 
 def delete_rating(params):
@@ -128,7 +135,7 @@ def delete_rating(params):
 
 def update_rating(params):
     """Update a movie's rating in the database."""
-    query = db_queries.UPDATE_MOVIE
+    query = db_queries.UPDATE_RATING
     modify_database(query, params)
 
 

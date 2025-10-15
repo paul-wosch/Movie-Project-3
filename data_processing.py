@@ -114,6 +114,23 @@ def add_movie(title, year, image_url, imdb_rating):
     return get_movie(title)["id"]
 
 
+def get_rating(user_id, movie_id):
+    """Return the user's rating for a movie."""
+    params = {"user_id": user_id,
+              "movie_id": movie_id
+              }
+    rating_obj = db.get_rating(params)
+    rating_obj = rating_obj[0]
+    rating = rating_obj[0]
+    note = rating_obj[-1]
+    rating_dict = {"rating": rating,
+                   "user_id": user_id,
+                   "movie_id": movie_id,
+                   "note": note
+                   }
+    return rating_dict
+
+
 def add_rating(user_id, movie_id, rating, note=""):
     """Add movie rating to the database."""
     params = {"user_id": user_id,
@@ -122,6 +139,24 @@ def add_rating(user_id, movie_id, rating, note=""):
               "note": note
               }
     db.add_rating(params)
+
+
+def delete_rating(user_id, movie_id):
+    """Delete rating for a movie from the database."""
+    params = {"user_id": user_id,
+              "movie_id": movie_id
+              }
+    db.delete_rating(params)
+
+
+def update_rating(user_id, movie_id, rating, note):
+    """Update rating for a movie in the database."""
+    params = {"user_id": user_id,
+              "movie_id": movie_id,
+              "rating": rating,
+              "note": note
+              }
+    db.update_rating(params)
 
 
 # ---------------------------------------------------------------------
@@ -162,16 +197,6 @@ def std_movie_from_api(movie):
 
 def main():
     """Main function for testing when running the script under main."""
-    # initialize_database(DB_INIT_QUERIES)
-    # print(get_movies())
-    # print(get_movie(1, find_by_id=True))
-    # print(get_country_by_name("United States"))
-    # print(get_country_by_name("Poland"))
-    # print(get_countries_for_movie(16))
-    # country flag lookup
-    # print(pycountry.countries.lookup("United States"))
-    # Country(alpha_2='US', alpha_3='USA', flag='🇺🇸', name='United States', numeric='840', official_name='United States of America')
-    # print(pycountry.countries.lookup("United States").flag)
     pass
 
 
