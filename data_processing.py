@@ -18,13 +18,15 @@ def get_movies(user_id=None):
                                   "image_url": movie[2],
                                   "imdb_rating": movie[3],
                                   "rating": movie[4],
-                                  "note": movie[5]}
+                                  "note": movie[5],
+                                  "movie_id": movie[6]}
                        for movie in movies}
     else:
         movies = db.get_movies()
         movies_dict = {movie[0]: {"year": movie[1],
                                   "image_url": movie[2],
-                                  "imdb_rating": movie[3]}
+                                  "imdb_rating": movie[3],
+                                  "movie_id": movie[4]}
                        for movie in movies}
     return movies_dict
 
@@ -56,7 +58,7 @@ def get_country_by_name(search_string):
         id = country[0]
         name = country[1]
         code = country[2]
-        emoji = pycountry.countries.get(alpha_2=code).flag
+        emoji = get_country_emoji(name)
         country_dict = {"id": id,
                         "name": name,
                         "code": code,
@@ -64,12 +66,17 @@ def get_country_by_name(search_string):
                         }
     # ...or generate a new one using the 'pycountry' module.
     else:
-        country = pycountry.countries.lookup(search_string)
         # Use temporary id to tag newly generated country object.
         temp_id = -1
-        name = country.name
-        code = country.alpha_2
-        emoji = country.flag
+        try:
+            country = pycountry.countries.lookup(search_string)
+            name = country.name
+            code = country.alpha_2
+            emoji = country.flag
+        except LookupError:
+            name = search_string
+            code = search_string
+            emoji = search_string
         country_dict = {"id": temp_id,
                         "name": name,
                         "code": code,
@@ -86,9 +93,9 @@ def get_countries_for_movie(movie_id):
                        "name": country[1],
                        "code": country[2],
                        "flag_url": country[3],
-                       "emoji": pycountry.countries.get(alpha_2=country[2]).flag
+                       "emoji": get_country_emoji(country[1])
                        } for country in countries]
-    return countries_list
+    return sorted(countries_list, key=lambda item: item["name"])
 
 
 def add_country(name, code):
@@ -187,12 +194,38 @@ def std_movie_from_api(movie):
     """Return standardized movie object for a single movie
     retrieved from the API.
     """
+    countries = movie["Country"].split(", ")
+    countries = [std_country_name_from_api_or_db(country) for country in countries]
     movie_object = {movie["Title"]: {"year": movie["Year"],
                                      "image_url": movie["Poster"],
                                      "imdb_rating": movie["imdbRating"],
-                                     "country": movie["Country"].split(", ")
+                                     "country": countries
                                      }}
     return movie_object
+
+
+def std_country_name_from_api_or_db(country_name):
+    """Return standardized country name if possible."""
+    try:
+        return pycountry.countries.lookup(country_name).name
+    except LookupError:
+        return country_name
+
+
+# ---------------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------------
+def get_country_emojis_for_movie(movie_id):
+    """Return list of country emojis for a given film."""
+    return [country["emoji"] for country in get_countries_for_movie(movie_id)]
+
+
+def get_country_emoji(country_name):
+    """Return the country flag emoji for a country."""
+    try:
+        return pycountry.countries.lookup(country_name).flag
+    except LookupError:
+        return country_name
 
 
 def main():

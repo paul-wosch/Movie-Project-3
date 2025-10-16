@@ -84,7 +84,8 @@ GET_MOVIES = """
         movies.image_url,
         movies.imdb_rating,
         ratings.rating,
-        ratings.note
+        ratings.note,
+        movies.id
     FROM ratings
     JOIN
         users ON ratings.user_id = users.id
@@ -97,7 +98,8 @@ GET_MOVIES_ALL_USERS = """
         movies.title,
         movies.year,
         movies.image_url,
-        movies.imdb_rating
+        movies.imdb_rating,
+        movies.id
     FROM movies
 """
 GET_MOVIE_BY_TITLE = """

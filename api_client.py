@@ -46,7 +46,7 @@ def find_movies(search_string):
     payload = {"s": search_string.lower()}
     response = fetch_omdb_api(payload)
     if response:
-        return response.json()["Search"]
+        return response.json().get("Search", [])
     return []
 
 

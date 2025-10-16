@@ -90,9 +90,10 @@ def is_in_movies(data, title):
     return False
 
 
-def format_movie_entry(title, year, rating):
+def format_movie_entry(title, year, rating, emojis):
     """Return a formatted movie entry."""
-    return f"{title} ({year}) - {rating:.1f}"
+    emojis_str = " ".join(emojis)
+    return f"{title} ({year}) - {rating:.1f} - {emojis_str}"
 
 
 def list_movies(*data, nested_call=False):
@@ -112,7 +113,9 @@ def list_movies(*data, nested_call=False):
     for title, details in data.items():
         year = details["year"]
         rating = details["rating"]
-        cprint_output(f"{format_movie_entry(title, year, rating)}")
+        movie_id = details["movie_id"]
+        emojis = data_processing.get_country_emojis_for_movie(movie_id)
+        cprint_output(f"{format_movie_entry(title, year, rating, emojis)}")
 
 
 def print_action_cancelled():
@@ -286,16 +289,30 @@ def ask_for_rating_note(update=True):
 # DYNAMIC MOVIE RETRIEVAL AND SELECTION FROM API OR DATABASE
 # ---------------------------------------------------------------------
 def list_api_search_results(search_term: str) -> tuple[str, dict]:
-    """Print retrieved movies from API and return a dispatch table
-    to allow user to select.
+    """Return retrieved movies from API as a formatted string
+    and a dispatch table to allow user to select.
     """
-    results_raw = api.find_movies(search_term)
-    results = data_processing.std_search_results_from_api(results_raw)
     dispatch_table = {}
     output = ""
-    for i, movie in enumerate(results, start=1):
-        dispatch_table[str(i)] = (movie["imdbID"], movie["title"])
-        output += (f"\n{i:>3}: {movie['title']} ({movie['year']}) [{movie['type']}]")
+    cprint_info("Looking up in OMDB...")
+    results_raw = api.find_movies(search_term)
+    if results_raw:
+        results = data_processing.std_search_results_from_api(results_raw)
+        for i, movie in enumerate(results, start=1):
+            imdbID = movie["imdbID"]
+            title = movie["title"]
+            year = movie['year']
+            type = movie['type']
+            countries = get_movie_details_from_api(imdbID)[title]["country"]
+            print(countries)
+            dispatch_table[str(i)] = (imdbID, title)
+            emojis = " ".join(
+                data_processing.get_country_emoji(country)
+                for country in countries
+            )
+            if emojis == False:
+                emojis = movie["imdbID"]["country"]
+            output += (f"\n{i:>3}: {title} ({year}) [{type}] - {emojis}")
     return output, dispatch_table
 
 
@@ -304,25 +321,30 @@ def select_movie_from_api_or_db(search_term, source="api"):
     selected from a list of movies retrieved via API / DB.
     """
     if source == "api":
-        output, dispatch_table = list_api_search_results(search_term)
-        cprint_output(f"\nMovies matching search term '{search_term}':")
+        message = f"\nMovies matching search term '{search_term}':"
+        results = list_api_search_results(search_term)
     else:
-        output, dispatch_table = list_db_search_results(search_term)
-        cprint_output("\nMovies matching your search:")
-    cprint_output(output)
-    while True:
-        choice = get_user_choice(len(dispatch_table),
-                                 start_at_zero=False,
-                                 prompt="Please select a movie")
-        if choice == "..":
-            choice = False
-            print_action_cancelled()
-            break
-        elif is_valid_user_choice(choice, dispatch_table):
-            break
-    if choice:
-        id, title = dispatch_table[choice]
-        return id, title
+        message = "\nMovies matching your search:"
+        results = list_db_search_results(search_term)
+    if all(results):
+        output, dispatch_table = results
+        cprint_output(message)
+        cprint_output(output)
+        while True:
+            choice = get_user_choice(len(dispatch_table),
+                                     start_at_zero=False,
+                                     prompt="Please select a movie")
+            if choice == "..":
+                choice = False
+                print_action_cancelled()
+                break
+            elif is_valid_user_choice(choice, dispatch_table):
+                break
+        if choice:
+            id, title = dispatch_table[choice]
+            return id, title
+    else:
+        cprint_info(f"Online search couldn't find any movies matching '{search_term}'")
     return (False, False)
 
 
@@ -347,8 +369,9 @@ def list_db_search_results(movie_titles: list[str]) -> tuple[str, dict]:
         year = movie["year"]
         rating_obj = data_processing.get_rating(user_id, movie_id)
         rating = rating_obj["rating"]
+        emojis = " ".join(data_processing.get_country_emojis_for_movie(movie_id))
         dispatch_table[str(i)] = (movie["id"], movie["title"])
-        output += (f"\n{i:>3}: {title} ({year}) - {rating}")
+        output += (f"\n{i:>3}: {title} ({year}) - {rating} - {emojis}")
     return output, dispatch_table
 
 
@@ -367,6 +390,7 @@ def fuzzy_search_movie_in_db(search_term=False) -> list[str] | bool:
     # Always suggest titles by fuzzy search.
     suggestions = difflib.get_close_matches(search_term, list(data), 4, 0.3)
     if len(suggestions) == 0:
+        cprint_info("A movie containing '{search_term}' could not be found.")
         return []
     return suggestions
 
@@ -374,6 +398,9 @@ def fuzzy_search_movie_in_db(search_term=False) -> list[str] | bool:
 def get_movie_id_and_title_from_db_search():
     """Return movie id and title for the user selection of a fuzzy search."""
     titles = fuzzy_search_movie_in_db()
+    # return early if user wants to cancel
+    if titles is False:
+        return False
     if titles:
         movie_id, title = select_movie_from_api_or_db(titles, "db")
         return movie_id, title
@@ -387,7 +414,8 @@ def add_movie_rating():
     """Add movie rating to the Database."""
     # -----------------------------------------------------------------
     # Always return early if user wants to cancel / has entered '..'.
-    data_current_user = data_processing.get_movies(CURRENT_USER_ID)
+    user_id = CURRENT_USER_ID
+    data_current_user = data_processing.get_movies(user_id)
     data_all_users = data_processing.get_movies()
     movie_title = ask_for_name()
     if movie_title is False:
@@ -395,9 +423,10 @@ def add_movie_rating():
     # -----------------------------------------------------------------
     # Dynamically retrieve movie suggestions
     # for the given title via API
-    imdbID, movie_title = select_movie_from_api_or_db(movie_title)
-    if movie_title is False:
+    selected_movie = select_movie_from_api_or_db(movie_title)
+    if any(selected_movie) is False:
         return False
+    imdbID, movie_title = selected_movie
     # -----------------------------------------------------------------
     # Check if current user already rated the movie.
     if is_in_movies(data_current_user, movie_title):
@@ -493,7 +522,7 @@ def update_movie_rating_and_note():
     user_id = CURRENT_USER_ID
     result = get_movie_id_and_title_from_db_search()
     # Return early if user wants to cancel.
-    if result is False:
+    if any(result) is False:
         return False
     movie_id, movie_title = result
     # -----------------------------------------------------------------
@@ -602,15 +631,25 @@ def get_movie_stats():
     cprint_output(f"Median rating: {median_rating}")
     # ...and make sure multiple best and worst movies are shown.
     cprint_output("Best movie(s): ", end="")
-    cprint_output(" | ".join(format_movie_entry(title,
-                                                data[title]['year'],
-                                                data[title]['rating'])
-                     for title in best_movies))
+    # create formatted list of the best movies
+    best_movies_formatted = [format_movie_entry(
+        title,
+        data[title]['year'],
+        data[title]['rating'],
+        data_processing.get_country_emojis_for_movie(data[title]['movie_id']))
+        for title in best_movies
+    ]
+    cprint_output(" | ".join(best_movies_formatted))
     cprint_output("Worst movie(s): ", end="")
-    cprint_output(f"{' | '.join(format_movie_entry(title,
-                                                   data[title]['year'],
-                                                   data[title]['rating'])
-                     for title in worst_movies)}")
+    # create formatted list of the worst movies
+    worst_movie_objects = [format_movie_entry(
+        title,
+        data[title]['year'],
+        data[title]['rating'],
+        data_processing.get_country_emojis_for_movie(data[title]['movie_id']))
+        for title in worst_movies
+    ]
+    cprint_output(f"{' | '.join(worst_movie_objects)}")
 
 
 def get_random_movie():
@@ -621,8 +660,10 @@ def get_random_movie():
     random_title = random.choice(movie_titles)
     rating = data[random_title]["rating"]
     year = data[random_title]["year"]
+    movie_id = data[random_title]["movie_id"]
+    emojis = " ".join(data_processing.get_country_emojis_for_movie(movie_id))
     cprint_output(f"\nYour movie for tonight: "
-          f"{random_title} ({year}), it's rated {rating}")
+          f"{random_title} ({year}) - {emojis}, it's rated {rating}")
 
 
 def search_movie():
@@ -643,9 +684,12 @@ def search_movie():
     found = False
     for title, details in data.items():
         if search_term.lower() in title.lower():
+            movie_id = details["movie_id"]
+            emojis = " ".join(data_processing.get_country_emojis_for_movie(movie_id))
             cprint_output(f"{format_movie_entry(title,
                                                 details['year'],
-                                                details['rating'])}")
+                                                details['rating'],
+                                                emojis)}")
             found = True
     if not found:
         # suggest titles by fuzzy search
@@ -659,7 +703,9 @@ def search_movie():
                 title = suggestion
                 year = data[suggestion]["year"]
                 rating = data[suggestion]["rating"]
-                cprint_output(format_movie_entry(title, year, rating))
+                movie_id = data[suggestion]["movie_id"]
+                emojis = " ".join(data_processing.get_country_emojis_for_movie(movie_id))
+                cprint_output(format_movie_entry(title, year, rating, emojis))
     return True
 
 
@@ -706,6 +752,7 @@ def filter_movies():
     """Filter movies based on specific criteria
     such as minimum rating, start year, and end year.
     """
+    user_id = CURRENT_USER_ID
     rating_threshold = ask_for_rating(
         allow_blank=True,
         prompt="Enter minimum rating (leave blank for no minimum rating): ")
@@ -715,7 +762,7 @@ def filter_movies():
     year_end = ask_for_year(
         allow_blank=True,
         prompt="Enter end year (leave blank for no end year): ")
-    data = movie_storage.get_movies()
+    data = data_processing.get_movies(user_id)
     filtered_movies = dict(filter(
         lambda movie: apply_filter(
             movie,
