@@ -527,11 +527,14 @@ def update_movie_rating_and_note():
     movie_id, movie_title = result
     # -----------------------------------------------------------------
     # Set 'rating' for the movie
-    rating = ask_for_rating()
+    rating_prompt = ("Enter the movie rating (0-10), leave empty\n"
+                     "to keep previous rating or type '..' to cancel: ")
+    rating = ask_for_rating(allow_blank=True, prompt=rating_prompt)
     if rating is False:
         return False
     # -----------------------------------------------------------------
     # Set action for the rating note depending on user's choice
+    previous_rating = data_processing.get_rating(user_id, movie_id)
     note = ask_for_rating_note()
     if note is False:
         return False
@@ -539,12 +542,18 @@ def update_movie_rating_and_note():
         note = ""
         note_msg = (f"Note for the movie's rating has been deleted.")
     elif note == 1:
-        note = data_processing.get_rating(user_id, movie_id)["note"]
+        note = previous_rating["note"]
         note_msg = (f"Note for the movie's rating has been left unchanged.")
     else:
         note_msg = (f"Note for the movie's rating has been updated.")
+    # Update the rating or keep previous value
+    if rating == None:
+        rating = previous_rating["rating"]
+        cprint_info(f"Leave previous rating of '{rating}' unchanged.")
+    else:
+        cprint_info(f"Change rating to '{rating}'.")
     data_processing.update_rating(user_id, movie_id, rating, note)
-    cprint_info(f"Successfully updated rating for '{movie_title}'.")
+    cprint_info(f"Successfully updated rating entry for '{movie_title}'.")
     cprint_info(note_msg)
     return True
 
