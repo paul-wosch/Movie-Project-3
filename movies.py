@@ -389,7 +389,7 @@ def fuzzy_search_movie_in_db(search_term=False) -> list[str] | bool:
     # Always suggest titles by fuzzy search.
     suggestions = difflib.get_close_matches(search_term, list(data), 4, 0.3)
     if len(suggestions) == 0:
-        cprint_info("A movie containing '{search_term}' could not be found.")
+        cprint_info(f"A movie containing '{search_term}' could not be found.")
         return []
     return suggestions
 
@@ -521,7 +521,7 @@ def update_movie_rating_and_note():
     user_id = CURRENT_USER_ID
     result = get_movie_id_and_title_from_db_search()
     # Return early if user wants to cancel.
-    if any(result) is False:
+    if result is False or any(result) is False:
         return False
     movie_id, movie_title = result
     # -----------------------------------------------------------------
