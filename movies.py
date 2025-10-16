@@ -304,7 +304,6 @@ def list_api_search_results(search_term: str) -> tuple[str, dict]:
             year = movie['year']
             type = movie['type']
             countries = get_movie_details_from_api(imdbID)[title]["country"]
-            print(countries)
             dispatch_table[str(i)] = (imdbID, title)
             emojis = " ".join(
                 data_processing.get_country_emoji(country)
