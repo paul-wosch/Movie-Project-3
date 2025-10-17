@@ -44,6 +44,10 @@ class RatingOutOfRangeError(BaseException):
     """Raised when rating is not between 0-10."""
 
 
+class CancelDialog(BaseException):
+    """Raised when user enters a predefined string in a prompt."""
+
+
 def show_menu(active="0"):
     """Display the main menu with different options
     and ask for user's choice."""
@@ -137,7 +141,7 @@ def ask_for_name():
             cprint_error("\nMovie name should not be empty!")
         elif movie_name == "..":
             print_action_cancelled()
-            return False
+            raise CancelDialog
         else:
             break
     return movie_name
@@ -155,7 +159,7 @@ def ask_for_name_part():
             cprint_error("Movie name or part of it should not be empty!")
         elif movie_name == "..":
             print_action_cancelled()
-            return False
+            raise CancelDialog
         else:
             break
     return movie_name
@@ -177,7 +181,7 @@ def ask_for_rating(allow_blank=False,
             # Action should be cancelled.
             if rating == "..":
                 print_action_cancelled()
-                return False
+                raise CancelDialog
             # Rating should be within valid range.
             if not 0 <= float(rating) <= 10:
                 raise RatingOutOfRangeError
@@ -206,7 +210,7 @@ def ask_for_year(allow_blank=False,
             # Action should be cancelled.
             if year == "..":
                 print_action_cancelled()
-                return False
+                raise CancelDialog
             # Return year if input is valid.
             if date.today().year < int(year):
                 error_msg = "Year should not lie in the future."
@@ -234,7 +238,7 @@ def ask_for_country(allow_blank=False,
             # Action should be cancelled.
             if country == "..":
                 print_action_cancelled()
-                return False
+                raise CancelDialog
             # Return country name if input is valid.
             return country
         except ValueError:
@@ -249,6 +253,8 @@ def ask_for_sort_order():
             prompt = ("\nDo you want to see the latest movies first or last?"
                       "\nEnter 'first' or 'last: ")
             sort_order = cprompt(prompt).lower()
+            if sort_order == "..":
+                raise CancelDialog
             if not sort_order in accepted_input:
                 raise InvalidInputError
             return sort_order
@@ -277,7 +283,7 @@ def ask_for_rating_note(update=True):
     note = cprompt(prompt)
     if note == "..":
         print_action_cancelled()
-        return False # cancel action
+        raise CancelDialog
     elif note == "" and update:
         return 1 # leave note unchanged
     elif note == "DELETE" and update:
@@ -336,7 +342,7 @@ def select_movie_from_api_or_db(search_term, source="api"):
             if choice == "..":
                 choice = False
                 print_action_cancelled()
-                break
+                raise CancelDialog
             elif is_valid_user_choice(choice, dispatch_table):
                 break
         if choice:
@@ -417,14 +423,10 @@ def add_movie_rating():
     data_current_user = data_processing.get_movies(user_id)
     data_all_users = data_processing.get_movies()
     movie_title = ask_for_name()
-    if movie_title is False:
-        return False
     # -----------------------------------------------------------------
     # Dynamically retrieve movie suggestions
     # for the given title via API
     selected_movie = select_movie_from_api_or_db(movie_title)
-    if any(selected_movie) is False:
-        return False
     imdbID, movie_title = selected_movie
     # -----------------------------------------------------------------
     # Check if current user already rated the movie.
@@ -444,7 +446,7 @@ def add_movie_rating():
     # ...otherwise fetch movie details from API.
     else:
         movie_obj = get_movie_details_from_api(imdbID)[movie_title]
-        print(movie_obj)
+        cprint_info("Fetching movie details from OMDB...")
         year = movie_obj["year"]
         image_url = movie_obj["image_url"]
         imdb_rating = movie_obj["imdb_rating"]
@@ -468,11 +470,7 @@ def add_movie_rating():
     # -----------------------------------------------------------------
     # Finally ask for rating / note and store it in the database.
     rating = ask_for_rating()
-    if rating is False:
-        return False
     note = ask_for_rating_note(update=False)
-    if note is False:
-        return False
     data_processing.add_rating(CURRENT_USER_ID, movie_id, rating, note)
     cprint_info(f"Successfully added rating for movie '{movie_title}'.")
     if note:
@@ -505,9 +503,6 @@ def delete_movie_rating():
     """Delete a movie's rating from the database."""
     user_id = CURRENT_USER_ID
     result = get_movie_id_and_title_from_db_search()
-    # Return early if user wants to cancel.
-    if result is False:
-        return False
     movie_id, movie_title = result
     data_processing.delete_rating(user_id, movie_id)
     cprint_info(f"Rating for '{movie_title}' successfully deleted")
@@ -520,24 +515,17 @@ def update_movie_rating_and_note():
     # Let the user chose which movie to re-rate
     user_id = CURRENT_USER_ID
     result = get_movie_id_and_title_from_db_search()
-    # Return early if user wants to cancel.
-    if result is False or any(result) is False:
-        return False
     movie_id, movie_title = result
     # -----------------------------------------------------------------
     # Set 'rating' for the movie
     rating_prompt = ("Enter the movie rating (0-10), leave empty\n"
                      "to keep previous rating or type '..' to cancel: ")
     rating = ask_for_rating(allow_blank=True, prompt=rating_prompt)
-    if rating is False:
-        return False
     # -----------------------------------------------------------------
     # Set action for the rating note depending on user's choice
     previous_rating = data_processing.get_rating(user_id, movie_id)
     note = ask_for_rating_note()
-    if note is False:
-        return False
-    elif note == -1:
+    if note == -1:
         note = ""
         note_msg = (f"Note for the movie's rating has been deleted.")
     elif note == 1:
@@ -561,9 +549,6 @@ def update_movie_rating_old():
     """Update a movie’s rating in the database."""
     data = movie_storage.get_movies()
     movie_title = ask_for_name()
-    # Return early if user wants to cancel.
-    if movie_title is False:
-        return False
     # Check if the film already exists.
     if not is_in_movies(data, movie_title):
         cprint_error(f"Movie '{movie_title}' doesn't exist!")
@@ -572,13 +557,8 @@ def update_movie_rating_old():
     else:
         title = movie_title
         # Ask for movie details
-        # and return early if user wants to cancel.
         rating = ask_for_rating()
-        if rating is False:
-            return False
         year = ask_for_year()
-        if year is False:
-            return False
         # Update the movie.
         movie_storage.update_movie(title, year, rating)
         cprint_info(f"Movie '{movie_title}' successfully updated")
@@ -686,9 +666,6 @@ def search_movie():
     user_id = CURRENT_USER_ID
     data = data_processing.get_movies(user_id)
     search_term = ask_for_name_part()
-    # Return early if user wants to cancel.
-    if search_term is False:
-        return False
     found = False
     for title, details in data.items():
         if search_term.lower() in title.lower():
@@ -823,7 +800,10 @@ def execute_user_choice(choice):
     if not DISPATCH_TABLE.get(choice):
         invalid_choice()
         return False
-    DISPATCH_TABLE[choice]()
+    try:
+        DISPATCH_TABLE[choice]()
+    except CancelDialog:
+        return True
     return True
 
 
