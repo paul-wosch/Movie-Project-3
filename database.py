@@ -13,7 +13,8 @@ DB_INIT_QUERIES = [
     db_queries.CREATE_TABLE_COUNTRIES,
     db_queries.CREATE_TABLE_MOVIES,
     db_queries.CREATE_TABLE_MOVIES_COUNTRIES,
-    db_queries.CREATE_TABLE_RATINGS
+    db_queries.CREATE_TABLE_RATINGS,
+    db_queries.ADD_DEFAULT_USER
 ]
 
 # Create the engine
@@ -43,8 +44,10 @@ def query_database(query, params):
     return results.fetchall()
 
 
-def initialize_database(queries):
+def initialize_database(queries=None):
     """Initialize database with the given list of queries."""
+    if queries is None:
+        queries = DB_INIT_QUERIES
     for query in queries:
         modify_database(query, params={})
 
@@ -71,6 +74,8 @@ def get_movie(params):
     """Return a single movie from the database."""
     if params.get("id"):
         query = db_queries.GET_MOVIE_BY_ID
+    elif params.get("imdb_id"):
+        query = db_queries.GET_MOVIE_BY_IMDBID
     else:
         query = db_queries.GET_MOVIE_BY_TITLE
     movie = query_database(query, params)
@@ -141,7 +146,7 @@ def update_rating(params):
 
 def main():
     """Main function for testing when running the script under main."""
-    # initialize_database(DB_INIT_QUERIES)
+    # initialize_database()
 
 
 if __name__ == "__main__":

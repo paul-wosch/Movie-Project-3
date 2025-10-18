@@ -14,35 +14,39 @@ def get_movies(user_id=None):
     params = {"user_id": user_id}
     if user_id:
         movies = db.get_movies(params)
-        movies_dict = {movie[0]: {"year": movie[1],
-                                  "image_url": movie[2],
-                                  "imdb_rating": movie[3],
-                                  "rating": movie[4],
-                                  "note": movie[5],
-                                  "movie_id": movie[6]}
+        # movie[1] corresponds to 'imdb_id', main key for the sub dictionary
+        movies_dict = {movie[1]: {"movie_id": movie[0],
+                                  "title": movie[2],
+                                  "year": movie[3],
+                                  "image_url": movie[4],
+                                  "imdb_rating": movie[5],
+                                  "rating": movie[6],
+                                  "note": movie[7]}
                        for movie in movies}
     else:
         movies = db.get_movies()
-        movies_dict = {movie[0]: {"year": movie[1],
-                                  "image_url": movie[2],
-                                  "imdb_rating": movie[3],
-                                  "movie_id": movie[4]}
+        movies_dict = {movie[1]: {"movie_id": movie[0],
+                                  "title": movie[2],
+                                  "year": movie[3],
+                                  "image_url": movie[4],
+                                  "imdb_rating": movie[5]}
                        for movie in movies}
     return movies_dict
 
 
 def get_movie(search_value, find_by_id=False) -> dict:
-    """Return a movie object for the given search value (id/title)."""
+    """Return a movie object for the given 'id' or 'imdb_id'."""
     if find_by_id:
         params = {"id": search_value}
     else:
-        params = {"title": search_value}
+        params = {"imdb_id": search_value}
     movie = db.get_movie(params)[0]
     movie_object = {"id": movie[0],
-                    "title": movie[1],
-                    "year": movie[2],
-                    "image_url": movie[3],
-                    "imdb_rating": movie[4]
+                    "imdb_id": movie[1],
+                    "title": movie[2],
+                    "year": movie[3],
+                    "image_url": movie[4],
+                    "imdb_rating": movie[5]
                     }
     return movie_object
 
@@ -92,7 +96,6 @@ def get_countries_for_movie(movie_id):
     countries_list = [{"id": country[0],
                        "name": country[1],
                        "code": country[2],
-                       "flag_url": country[3],
                        "emoji": get_country_emoji(country[1])
                        } for country in countries]
     return sorted(countries_list, key=lambda item: item["name"])
@@ -111,14 +114,15 @@ def add_movie_country_relationship(movie_id, country_id):
     db.add_movie_country_relationship(params)
 
 
-def add_movie(title, year, image_url, imdb_rating):
+def add_movie(imdb_id, title, year, image_url, imdb_rating):
     """Add movie to the database and return the id."""
-    params = {"title": title,
+    params = {"imdb_id": imdb_id,
+              "title": title,
               "year": year,
               "image_url": image_url,
               "imdb_rating": imdb_rating}
     db.add_movie(params)
-    return get_movie(title)["id"]
+    return get_movie(imdb_id)["id"]
 
 
 def get_rating(user_id, movie_id):
@@ -172,8 +176,8 @@ def update_rating(user_id, movie_id, rating, note):
 def std_movie_from_api_search(movie_from_api):
     """Return a standardized movie object for a movie retrieved from the API."""
     movie_object = {"title": movie_from_api["Title"],
+                    "imdb_id": movie_from_api["imdbID"],
                     "year": movie_from_api["Year"],
-                    "imdbID": movie_from_api["imdbID"],
                     "type": movie_from_api["Type"]
                     }
     return movie_object
@@ -196,10 +200,11 @@ def std_movie_from_api(movie):
     """
     countries = movie["Country"].split(", ")
     countries = [std_country_name_from_api_or_db(country) for country in countries]
-    movie_object = {movie["Title"]: {"year": movie["Year"],
-                                     "image_url": movie["Poster"],
-                                     "imdb_rating": movie["imdbRating"],
-                                     "country": countries
+    movie_object = {movie["imdbID"]: {"title": movie["Title"],
+                                      "year": movie["Year"],
+                                      "image_url": movie["Poster"],
+                                      "imdb_rating": movie["imdbRating"],
+                                      "country": countries
                                      }}
     return movie_object
 

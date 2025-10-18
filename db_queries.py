@@ -1,28 +1,65 @@
 """This module contains all sqlite queries used.
 
-It also serves as a documentation for the different key value pairs
-needed to pass when calling the different sqlite query functions
+Those queries serve as a documentation for the different key value pairs
+needed to pass when calling the customized python functions
 performing CRUD operations to the database.
 
-Simplified database structure for the project:
+Database structure for the project:
 
-    users: id:int (PK), user_name:text (unique), first_name:text, last_name:text, password_hash:text
-    movies: id:int (PK), title:text (unique), year:int, image_url:text, imdb_rating:real
-    countries: id:int (PK), name:text, code:text, flag_url:text
-    movies_countries: movie_id:int (FK), country_id:int (FK)
-    ratings: user_id:int (PK, FK), movie_id:int (PK, FK), rating:real, note:text
+Paste the following code to the ERD editor on
+https://app.eraser.io/#note-title-editor
+
+--- BEGIN CODE ---
+// title
+title Movie Rating Platform Data Model
+
+// define tables
+users [icon: user, color: yellow]{
+  id int pk auto
+  user_name text unique
+  first_name text
+  last_name text
+  password_hash text
+}
+
+movies [icon: film, color: blue]{
+  id int pk auto
+  imdb_id text unique
+  title text
+  year int
+  image_url text
+  imdb_rating real
+}
+
+countries [icon: flag, color: green]{
+  id int pk auto
+  name text
+  code text
+}
+
+movies_countries [icon: globe, color: lightblue]{
+  movie_id int fk
+  country_id int fk
+}
+
+ratings [icon: star, color: orange]{
+  user_id int fk
+  movie_id int fk
+  rating real
+  note text
+}
+
+// define relationships
+movies_countries.movie_id > movies.id
+movies_countries.country_id > countries.id
+ratings.user_id > users.id
+ratings.movie_id > movies.id
+--- END CODE ---
 """
 
 # ---------------------------------------------------------------------
 # INITIALIZE
 # ---------------------------------------------------------------------
-CREATE_TABLE_MOVIES_EXAMPLE = """
-    CREATE TABLE IF NOT EXISTS movies (
-        id      INTEGER PRIMARY KEY AUTOINCREMENT,
-        title   TEXT UNIQUE NOT NULL,
-        year    INTEGER NOT NULL,
-        rating  REAL NOT NULL
-        )"""
 CREATE_TABLE_USERS = """
     CREATE TABLE IF NOT EXISTS users (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,8 +77,9 @@ CREATE_TABLE_COUNTRIES = """
 CREATE_TABLE_MOVIES = """
     CREATE TABLE IF NOT EXISTS movies (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        title       TEXT UNIQUE NOT NULL,
-        year        INTEGER NOT NULL,
+        imdb_id     TEXT UNIQUE NOT NULL,
+        title       TEXT NOT NULL,
+        year        INTEGER,
         image_url   TEXT,
         imdb_rating REAL
     )"""
@@ -61,13 +99,14 @@ CREATE_TABLE_RATINGS = """
         FOREIGN KEY(user_id) REFERENCES users(id),
         FOREIGN KEY(movie_id) REFERENCES movies(id)
     )"""
+ADD_DEFAULT_USER = "INSERT INTO users (user_name) VALUES ('default')"
 # ---------------------------------------------------------------------
 # CREATE
 # ---------------------------------------------------------------------
 ADD_USER = ""
 ADD_COUNTRY = "INSERT INTO countries (name, code) VALUES (:name, :code)"
-ADD_MOVIE = ("INSERT INTO movies (title, year, image_url, imdb_rating)"
-             "VALUES (:title, :year, :image_url, :imdb_rating)")
+ADD_MOVIE = ("INSERT INTO movies (imdb_id, title, year, image_url, imdb_rating)"
+             "VALUES (:imdb_id, :title, :year, :image_url, :imdb_rating)")
 ADD_RATING = ("INSERT INTO ratings (user_id, movie_id, rating, note)"
               "VALUES (:user_id, :movie_id, :rating, :note)")
 ADD_MOVIE_COUNTRY = """
@@ -79,13 +118,14 @@ ADD_MOVIE_COUNTRY = """
 # ---------------------------------------------------------------------
 GET_MOVIES = """
     SELECT
+        movies.id,
+        movies.imdb_id,
         movies.title,
         movies.year,
         movies.image_url,
         movies.imdb_rating,
         ratings.rating,
-        ratings.note,
-        movies.id
+        ratings.note
     FROM ratings
     JOIN
         users ON ratings.user_id = users.id
@@ -95,16 +135,18 @@ GET_MOVIES = """
 """
 GET_MOVIES_ALL_USERS = """
     SELECT
+        movies.id,
+        movies.imdb_id,
         movies.title,
         movies.year,
         movies.image_url,
-        movies.imdb_rating,
-        movies.id
+        movies.imdb_rating
     FROM movies
 """
 GET_MOVIE_BY_TITLE = """
     SELECT
         movies.id,
+        movies.imdb_id,
         movies.title,
         movies.year,
         movies.image_url,
@@ -115,12 +157,24 @@ GET_MOVIE_BY_TITLE = """
 GET_MOVIE_BY_ID = """
     SELECT
         movies.id,
+        movies.imdb_id,
         movies.title,
         movies.year,
         movies.image_url,
         movies.imdb_rating
     FROM movies
     WHERE movies.id = :id
+"""
+GET_MOVIE_BY_IMDBID = """
+    SELECT
+        movies.id,
+        movies.imdb_id,
+        movies.title,
+        movies.year,
+        movies.image_url,
+        movies.imdb_rating
+    FROM movies
+    WHERE movies.imdb_id = :imdb_id
 """
 GET_COUNTRY_BY_CODE = "SELECT * FROM countries WHERE code = :code"
 GET_COUNTRY_BY_NAME = "SELECT * FROM countries WHERE name = :name"
@@ -144,7 +198,7 @@ GET_RATING = """
 UPDATE_USER = ""
 UPDATE_MOVIE = """
     UPDATE movies 
-    SET title = :title, year = :year, image_url = :image_url, imdb_rating = :imdb_rating
+    SET imdb_id = :imdb_id, title = :title, year = :year, image_url = :image_url, imdb_rating = :imdb_rating
     WHERE id = :id
 """
 UPDATE_RATING = """
