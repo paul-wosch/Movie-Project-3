@@ -326,9 +326,12 @@ def list_api_search_results(search_term: str) -> tuple[str, dict]:
         for i, movie in enumerate(results, start=1):
             imdb_id = movie["imdb_id"]
             title = movie["title"]
-            year = movie["year"]
             type = movie["type"]
-            countries = get_movie_details_from_api(imdb_id)[imdb_id]["country"]
+            extended_movie_obj = get_movie_details_from_api(imdb_id)[imdb_id]
+            countries = extended_movie_obj["country"]
+            year = extended_movie_obj["year"]
+            if year == "":
+                year = "N/A"
             dispatch_table[str(i)] = (imdb_id, title)
             emojis = " ".join(
                 data_processing.get_country_emoji(country)
@@ -377,7 +380,7 @@ def select_movie_from_api_or_db(search_term=None, source="api"):
 def get_movie_details_from_api(imdb_id):
     """Return movie object for the given imdbID."""
     movie_object_raw = api.fetch_movie_details(imdb_id)
-    movie_object = data_processing.std_movie_from_api(movie_object_raw)
+    movie_object = data_processing.std_extended_movie_object_from_api(movie_object_raw)
     return movie_object
 
 
@@ -505,9 +508,13 @@ def add_movie_rating():
     # -----------------------------------------------------------------
     # ...otherwise fetch movie details from API.
     else:
-        movie_obj = get_movie_details_from_api(imdb_id)[imdb_id]
         cprint_info("Fetching movie details from OMDB...")
+        movie_obj = get_movie_details_from_api(imdb_id)[imdb_id]
         year = movie_obj["year"]
+        if year == "":
+            cprint_error("Couldn't retrieve a valid year from OMDB.")
+            prompt = "Please enter the year of release manually ('..' to cancel): "
+            year = str(ask_for_year(prompt=prompt))
         image_url = movie_obj["image_url"]
         imdb_rating = movie_obj["imdb_rating"]
         countries = movie_obj["country"]
@@ -555,7 +562,7 @@ def add_country_if_new(country_name):
         code = country_object["code"]
         country_id = data_processing.add_country(name, code)
         cprint_info(f"Successfully added country data for"
-                    f" '{name}'. (ID: {country_id}")
+                    f" '{name}'. (ID: {country_id})")
         return country_id
     return False
 

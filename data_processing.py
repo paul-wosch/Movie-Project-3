@@ -2,6 +2,8 @@ import pycountry
 from sqlalchemy.exc import SQLAlchemyError
 import database as db
 
+YEAR_STR_LENGTH = 4
+
 
 # ---------------------------------------------------------------------
 # CRUD OPERATIONS
@@ -173,13 +175,45 @@ def update_rating(user_id, movie_id, rating, note):
 # ---------------------------------------------------------------------
 # PROCESS RECEIVED DATA FROM API
 # ---------------------------------------------------------------------
-def std_movie_from_api_search(movie_from_api):
-    """Return a standardized movie object for a movie retrieved from the API."""
-    movie_object = {"title": movie_from_api["Title"],
-                    "imdb_id": movie_from_api["imdbID"],
-                    "year": movie_from_api["Year"],
-                    "type": movie_from_api["Type"]
+def std_year_from_api(movie_obj):
+    """Return standardized year for a movie retrieved from the API.
+
+    If the movie was already selected by the user
+    and standardization fails: Let user manually enter the year.
+    """
+    year = movie_obj["Year"]
+    # Fallback 1 - get year from last 4 chars of the 'Released' field
+    if not is_valid_year(year):
+        year = movie_obj["Released"][-4:]
+    # Fallback 2 - set year to empty string
+    if not is_valid_year(year):
+        year = ""
+    return year
+
+
+def std_movie_object_from_api(movie_obj):
+    """Return a standardized movie object for a movie during an API search."""
+    movie_object = {"title": movie_obj["Title"],
+                    "imdb_id": movie_obj["imdbID"],
+                    "year": movie_obj["Year"],
+                    "type": movie_obj["Type"]
                     }
+    return movie_object
+
+
+def std_extended_movie_object_from_api(movie_obj):
+    """Return standardized movie object for a single movie
+    retrieved from the API and selected by a user.
+    """
+    countries = movie_obj["Country"].split(", ")
+    countries = [std_country_name_from_api_or_db(country) for country in countries]
+    year = std_year_from_api(movie_obj)
+    movie_object = {movie_obj["imdbID"]: {"title": movie_obj["Title"],
+                                          "year": year,
+                                          "image_url": movie_obj["Poster"],
+                                          "imdb_rating": movie_obj["imdbRating"],
+                                          "country": countries
+                                          }}
     return movie_object
 
 
@@ -189,24 +223,9 @@ def std_search_results_from_api(results):
     """
     if results:
         return sorted([
-            std_movie_from_api_search(result) for result in results],
+            std_movie_object_from_api(result) for result in results],
             key=lambda x: x['year'], reverse=True)
     return []
-
-
-def std_movie_from_api(movie):
-    """Return standardized movie object for a single movie
-    retrieved from the API.
-    """
-    countries = movie["Country"].split(", ")
-    countries = [std_country_name_from_api_or_db(country) for country in countries]
-    movie_object = {movie["imdbID"]: {"title": movie["Title"],
-                                      "year": movie["Year"],
-                                      "image_url": movie["Poster"],
-                                      "imdb_rating": movie["imdbRating"],
-                                      "country": countries
-                                     }}
-    return movie_object
 
 
 def std_country_name_from_api_or_db(country_name):
@@ -220,6 +239,13 @@ def std_country_name_from_api_or_db(country_name):
 # ---------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------
+def is_valid_year(year: str) -> bool:
+    """Return True if a year string is valid."""
+    if year.isdigit() and len(year) == YEAR_STR_LENGTH:
+        return True
+    return False
+
+
 def get_country_emojis_for_movie(movie_id):
     """Return list of country emojis for a given film."""
     return [country["emoji"] for country in get_countries_for_movie(movie_id)]
