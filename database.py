@@ -144,6 +144,17 @@ def update_rating(params):
     modify_database(query, params)
 
 
+# ---------------------------------------------------------------------
+# OTHER QUERIES
+# ---------------------------------------------------------------------
+
+def count_ratings_for_user(params):
+    """Return the number of movie's rated by a user."""
+    query = db_queries.COUNT_RATINGS_FOR_USER
+    ratings_count = query_database(query, params)
+    return ratings_count
+
+
 def main():
     """Main function for testing when running the script under main."""
     # initialize_database()

@@ -233,6 +233,14 @@ def get_country_emoji(country_name):
         return country_name
 
 
+def count_movie_ratings_for_user(user_id):
+    """Return the number of rated movies for the given user id."""
+    params = {"user_id": user_id}
+    result = db.count_ratings_for_user(params)
+    count = result[0][0]
+    return count
+
+
 def main():
     """Main function for testing when running the script under main."""
     pass

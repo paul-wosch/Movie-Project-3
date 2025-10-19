@@ -41,7 +41,7 @@ def match_color(text_color):
               "purple": "0;95",
               "cyan": "0;96",
               "white": "0;97",
-              "grey": "0;37m",
+              "grey": "0;37",
               }
     return colors.get(text_color, None)
 
@@ -69,6 +69,7 @@ INFO = color_on("cyan")
 ERROR = color_on("red")
 OUTPUT = color_on("blue")
 ACTIVE = color_on("purple")
+INACTIVE = color_on("grey")
 PROMPT = color_on("yellow")
 OFF = color_off()
 
@@ -99,6 +100,11 @@ def cprint_output(text, **kwargs):
 def cprint_active(text, **kwargs):
     """Print the given text with style 'ACTIVE'."""
     print(f"{ACTIVE}{text}{OFF}", **kwargs)
+
+
+def cprint_inactive(text, **kwargs):
+    """Print the given text with style 'INACTIVE'."""
+    print(f"{INACTIVE}{text}{OFF}", **kwargs)
 
 
 def cprompt(text, strip=True):

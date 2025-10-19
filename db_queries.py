@@ -214,3 +214,7 @@ DELETE_RATING = """
     DELETE FROM ratings
     WHERE user_id = :user_id AND movie_id = :movie_id
 """
+# ---------------------------------------------------------------------
+# COUNT
+# ---------------------------------------------------------------------
+COUNT_RATINGS_FOR_USER = "SELECT COUNT(*) FROM ratings WHERE user_id = :user_id"

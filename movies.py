@@ -3,14 +3,15 @@ import difflib
 import statistics
 from datetime import date
 
-import movie_storage
 import data_processing
 from cli_style import (cprint_default,
                        cprint_info,
                        cprint_error,
                        cprint_output,
                        cprint_active,
-                       cprompt)
+                       cprint_inactive,
+                       cprompt,
+                       clear_screen)
 import api_client as api
 
 # Modify after implementing user management
@@ -31,7 +32,15 @@ MENU_ENTRIES = [
     "10. Filter movies"
 ]
 
+MENU_INDICES_ON_NO_DATA = {0,2}
+MENU_INDICES_ON_NO_USER = {0}
+ALL_MENU_INDICES = set(range(len(MENU_ENTRIES)))
+DEACTIVATED_MENU_INDICES_ON_NO_DATA = ALL_MENU_INDICES - MENU_INDICES_ON_NO_DATA
 
+
+# ---------------------------------------------------------------------
+# CUSTOM EXCEPTIONS
+# ---------------------------------------------------------------------
 class InvalidInputError(BaseException):
     """Raised when user input isn't valid"""
 
@@ -47,108 +56,93 @@ class RatingOutOfRangeError(BaseException):
 class CancelDialog(BaseException):
     """Raised when user enters a predefined string in a prompt."""
 
+
 class MovieRatingNotFoundError(BaseException):
     """Raised when a movie's rating could not be found."""
 
 
+class NoRecordsFoundError(BaseException):
+    """Raised when no database records are found (for the current user)."""
+
+
+# ---------------------------------------------------------------------
+# CLI MENU
+# ---------------------------------------------------------------------
 def show_menu(active="0"):
     """Display the main menu with different options
     and ask for user's choice."""
+    current_user = CURRENT_USER_ID
+    inactive_menu_items = DEACTIVATED_MENU_INDICES_ON_NO_DATA
     # Display the heading always with the menu.
     cprint_default("********** My Movies Database **********\n")
     cprint_default("Menu:")
     # Build the menu entries from a list of menu items.
     for i, entry in enumerate(MENU_ENTRIES):
+        # Turn off menu entry if no movie ratings found for user
+        if not user_has_movie_ratings(current_user) and i in inactive_menu_items:
+            cprint_inactive(entry)
         # Check if menu item is active and change color accordingly.
-        if int(active) == i and int(active) != 0:
+        elif int(active) == i and int(active) != 0:
             cprint_active(entry)
         else:
             cprint_default(entry)
 
 
-def get_user_choice(entries=len(MENU_ENTRIES),
-                    start_at_zero=True,
-                    prompt="Enter choice"):
-    """Ask user for their menu choice."""
-    if start_at_zero:
-        start = 0
-        end = entries - 1
-    else:
-        start = 1
-        end = entries
-    if entries == 1:
-        range = f"{start}"
-    else:
-        range = f"{start}-{end}"
-    choice = cprompt(f"\n{prompt} ({range}): ")
-    return choice
-
-
-def wait_for_enter_key():
-    """Stop the program until user hits enter key."""
-    cprompt("\nPress enter key to continue.\n")
-
-
-def get_movie_titles(data):
-    """Return a list of all movie titles."""
-    titles = [imdb_id["title"] for imdb_id in data]
-    return titles
-
-
-def get_imdb_ids_with_title(data):
-    """Return a dictionary of all imdb_ids with their title."""
-    return {imdb_id: details["title"] for imdb_id, details in data.items()}
-
-
-def get_imdb_ids(data):
-    """Return a list of all movie imdb_ids."""
-    return list(data)
-
-
-def is_in_movies(data, imdb_id):
-    """Check if a movie is in the movies-database."""
-    if imdb_id.strip() in data:
-        return True
-    return False
-
-
-def format_movie_entry(title, year, rating, emojis):
-    """Return a formatted movie entry."""
-    emojis_str = " ".join(emojis)
-    return f"{title} ({year}) - {rating:.1f} - {emojis_str}"
-
-
-def list_movies(*data, nested_call=False):
-    """Show all the movies in the database with their details.
-
-    The function can also be called by the sort or search function."""
-    # TODO: Check behaviour when movies table is empty.
-    user_id = CURRENT_USER_ID
-    print()
-    if not nested_call:
-        data = data_processing.get_movies(user_id=user_id)
-        cprint_output(f"{len(data)} movies in total:\n")
-    else:
-        # Because we passed the data as an optional argument...
-        # ...we need to unpack tuple of one element.
-        data = data[0]
-    for imdb_id, details in data.items():
-        movie_id = details["movie_id"]
-        title = details["title"]
-        year = details["year"]
-        rating = details["rating"]
-        emojis = data_processing.get_country_emojis_for_movie(movie_id)
-        cprint_output(f"{format_movie_entry(title, year, rating, emojis)}")
-
-
-def print_action_cancelled():
-    """Print an information that an action has been canceled."""
-    cprint_info("Action canceled, returning back to menu...")
+def run_cli_with_input_listener():
+    """Run the command line interface, showing the menu with input listener."""
+    dispatch_table = DISPATCH_TABLE
+    while True:
+        clear_screen()
+        if not user_has_movie_ratings():
+            entries_on = MENU_INDICES_ON_NO_DATA
+            choices_str = ", ".join(f"'{entry}'" for entry in sorted(list(entries_on)))
+            dispatch_table = {str(i): dispatch_table[str(i)] for i in entries_on}
+        else:
+            choices_str = None
+        show_menu()
+        user_choice = ask_for_user_choice(choices=choices_str)
+        # Rebuild the menu with highlighted menu entry.
+        # This only works for numbers.
+        if user_choice.isdigit():
+            clear_screen()
+            show_menu(user_choice)
+        # Option to exit the program.
+        if user_choice == "0":
+            say_bye()
+            break
+        # Execute the selected action.
+        if execute_user_choice(user_choice, dispatch_table=dispatch_table):
+            pass
+        # Intentionally pause after every action,
+        # to allow for reading of information or error messages.
+        wait_for_enter_key()
 
 
 # ---------------------------------------------------------------------
 # PROMPTS
 # ---------------------------------------------------------------------
+def ask_for_user_choice(entries=len(MENU_ENTRIES),
+                        start_at_zero=True,
+                        prompt="Enter choice",
+                        choices=""):
+    """Ask user for their (menu) choice."""
+    if choices:
+        choice = cprompt(f"\n{prompt} ({choices}): ")
+    else:
+        if start_at_zero:
+            start = 0
+            end = entries - 1
+        else:
+            start = 1
+            end = entries
+        if entries == 1:
+            range = f"{start}"
+        else:
+            range = f"{start}-{end}"
+        choice = cprompt(f"\n{prompt} ({range}): ")
+    return choice
+
+
 def ask_for_name():
     """Ask user for the name of a movie and return this value.
 
@@ -311,8 +305,13 @@ def ask_for_rating_note(update=True):
     return note # add or update note
 
 
+def wait_for_enter_key():
+    """Stop the program until user hits enter key."""
+    cprompt("\nPress enter key to continue.\n")
+
+
 # ---------------------------------------------------------------------
-# DYNAMIC MOVIE RETRIEVAL AND SELECTION FROM API OR DATABASE
+# DYNAMIC MOVIE RETRIEVAL, SELECTION, FUZZY SEARCH FROM API OR DATABASE
 # ---------------------------------------------------------------------
 def list_api_search_results(search_term: str) -> tuple[str, dict]:
     """Return retrieved movies from API as a formatted string
@@ -357,11 +356,10 @@ def select_movie_from_api_or_db(search_term=None, source="api"):
         cprint_output(message)
         cprint_output(output)
         while True:
-            choice = get_user_choice(len(dispatch_table),
-                                     start_at_zero=False,
-                                     prompt="Please select a movie")
+            choice = ask_for_user_choice(len(dispatch_table),
+                                         start_at_zero=False,
+                                         prompt="Please select a movie")
             if choice == "..":
-                choice = False
                 print_action_cancelled()
                 raise CancelDialog
             elif is_valid_user_choice(choice, dispatch_table):
@@ -418,7 +416,7 @@ def sequence_matcher(search_term, input_dict, n, cutoff):
     return matches
 
 
-def fuzzy_search_movie_in_db(search_term=None) -> list[str] | bool:
+def fuzzy_search_movie_in_db(search_term=None) -> dict | bool:
     """Return movie titles received by fuzzy search for search term.
 
     If no search term was given ask for a movie title or part of it.
@@ -432,7 +430,7 @@ def fuzzy_search_movie_in_db(search_term=None) -> list[str] | bool:
     suggestions = sequence_matcher(search_term, movies_dict, 4, 0.3)
     if len(suggestions) == 0:
         cprint_info(f"A movie containing '{search_term}' could not be found.")
-        return []
+        return dict()
     return suggestions
 
 
@@ -446,8 +444,37 @@ def get_imdb_id_and_title_from_db_search():
 
 
 # ---------------------------------------------------------------------
-# CRUD OPERATIONS
+# CLI COMMAND FUNCTIONS
 # ---------------------------------------------------------------------
+def format_movie_entry(title, year, rating, emojis):
+    """Return a formatted movie entry."""
+    emojis_str = " ".join(emojis)
+    return f"{title} ({year}) - {rating:.1f} - {emojis_str}"
+
+
+def list_movies(*data, nested_call=False):
+    """Show all the movies in the database with their details.
+
+    The function can also be called by the sort or search function.
+    """
+    user_id = CURRENT_USER_ID
+    print()
+    if not nested_call:
+        data = data_processing.get_movies(user_id=user_id)
+        cprint_output(f"{len(data)} movies in total:\n")
+    else:
+        # Because we passed the data as an optional argument...
+        # ...we need to unpack tuple of one element.
+        data = data[0]
+    for imdb_id, details in data.items():
+        movie_id = details["movie_id"]
+        title = details["title"]
+        year = details["year"]
+        rating = details["rating"]
+        emojis = data_processing.get_country_emojis_for_movie(movie_id)
+        cprint_output(f"{format_movie_entry(title, year, rating, emojis)}")
+
+
 def add_movie_rating():
     """Add movie rating to the Database."""
     # -----------------------------------------------------------------
@@ -584,7 +611,7 @@ def update_movie_rating_and_note():
 
 
 def get_ratings(data):
-    """Return th rating for each movie as a list."""
+    """Return the rating for each movie as a list."""
     return [values["rating"] for values in data.values()]
 
 
@@ -692,7 +719,6 @@ def search_movie():
         rating = details["rating"]
         emojis = data_processing.get_country_emojis_for_movie(movie_id)
         if search_term.lower() in title.lower():
-            # emojis = " ".join(data_processing.get_country_emojis_for_movie(movie_id))
             cprint_output(f"{format_movie_entry(title,
                                                 year,
                                                 rating,
@@ -785,6 +811,33 @@ def filter_movies():
     list_movies(filtered_movies_sorted, nested_call=True)
 
 
+# ---------------------------------------------------------------------
+# SIMPLE LIST AND DICT RETURNING FUNCTIONS
+# ---------------------------------------------------------------------
+def get_movie_titles(data):
+    """Return a list of all movie titles."""
+    titles = [imdb_id["title"] for imdb_id in data]
+    return titles
+
+
+def get_imdb_ids_with_title(data):
+    """Return a dictionary of all imdb_ids with their title."""
+    return {imdb_id: details["title"] for imdb_id, details in data.items()}
+
+
+def get_imdb_ids(data):
+    """Return a list of all movie imdb_ids."""
+    return list(data)
+
+
+# ---------------------------------------------------------------------
+# PRINT HELPER FUNCTIONS
+# ---------------------------------------------------------------------
+def print_action_cancelled():
+    """Print an information that an action has been canceled."""
+    cprint_info("Action canceled, returning back to menu...")
+
+
 def not_implemented():
     """Dummy function."""
     cprint_error("Not implemented")
@@ -797,9 +850,42 @@ def do_nothing():
 
 def invalid_choice():
     """Display a message for invalid menu choices."""
-    cprint_error("Invalid choice")
+    cprint_error("\nInvalid choice")
 
 
+def say_bye():
+    """Print 'Bye!' on exit of the program."""
+    cprint_info("\nBye!")
+
+
+# ---------------------------------------------------------------------
+# BOOLEAN FUNCTIONS
+# ---------------------------------------------------------------------
+def is_valid_user_choice(choice, dispatch_table):
+    """Return user choice if it's a member of a given dispatch table."""
+    if not dispatch_table.get(choice):
+        invalid_choice()
+        return False
+    return choice
+
+
+def is_in_movies(data, imdb_id):
+    """Check if a movie is in the movies-database."""
+    if imdb_id.strip() in data:
+        return True
+    return False
+
+
+def user_has_movie_ratings(user_id=CURRENT_USER_ID):
+    """Return True if user rated at least one movie."""
+    if data_processing.count_movie_ratings_for_user(user_id) > 0:
+        return True
+    return False
+
+
+# ---------------------------------------------------------------------
+# FUNCTION DISPATCHER
+# ---------------------------------------------------------------------
 DISPATCH_TABLE = {
     "0": do_nothing,
     "1": list_movies,
@@ -815,32 +901,24 @@ DISPATCH_TABLE = {
 }
 
 
-def execute_user_choice(choice):
+def execute_user_choice(choice, dispatch_table=None):
     """Execute a function for the corresponding user choice.
 
     Return False if the choice was invalid, otherwise True.
     """
-    if not DISPATCH_TABLE.get(choice):
-        invalid_choice()
+    if dispatch_table is None:
+        dispatch_table = DISPATCH_TABLE
+    if DISPATCH_TABLE.get(choice) and not dispatch_table.get(choice):
+        cprint_error(f"\nAdd a movie rating to enable this function.")
         return False
-    try:
-        DISPATCH_TABLE[choice]()
-    except (CancelDialog, MovieRatingNotFoundError):
-        return True
-    return True
-
-
-def is_valid_user_choice(choice, dispatch_table):
-    """Return user choice if it's a member of a given dispatch table."""
     if not dispatch_table.get(choice):
         invalid_choice()
         return False
-    return choice
-
-
-def say_bye():
-    """Print 'Bye!' on exit of the program."""
-    cprint_info("\nBye!\n")
+    try:
+        dispatch_table[choice]()
+    except (CancelDialog, MovieRatingNotFoundError):
+        return True
+    return True
 
 
 def main():
