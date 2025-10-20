@@ -55,6 +55,16 @@ def initialize_database(queries=None):
 # ---------------------------------------------------------------------
 # CRUD OPERATIONS
 # ---------------------------------------------------------------------
+def get_user(params):
+    """Return a user's record from the database by id or username."""
+    if params.get("id"):
+        query = db_queries.GET_USER_BY_ID
+    else:
+        query = db_queries.GET_USER_BY_USERNAME
+    movie = query_database(query, params)
+    return movie
+
+
 def get_movies(params=None):
     """Return movies from the database (for the given user).
 
@@ -80,6 +90,12 @@ def get_movie(params):
         query = db_queries.GET_MOVIE_BY_TITLE
     movie = query_database(query, params)
     return movie
+
+
+def add_user(params):
+    """Add user record to the users table."""
+    query = db_queries.ADD_USER
+    modify_database(query, params)
 
 
 def add_movie(params):
@@ -155,9 +171,12 @@ def count_ratings_for_user(params):
     return ratings_count
 
 
+initialize_database()
+
+
 def main():
     """Main function for testing when running the script under main."""
-    # initialize_database()
+    pass
 
 
 if __name__ == "__main__":

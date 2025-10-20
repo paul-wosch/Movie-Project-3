@@ -8,6 +8,35 @@ YEAR_STR_LENGTH = 4
 # ---------------------------------------------------------------------
 # CRUD OPERATIONS
 # ---------------------------------------------------------------------
+def get_user(search_value, find_by_id=False) -> dict:
+    """Return a user object for the given 'id' or 'user_name'."""
+    if find_by_id:
+        params = {"id": search_value}
+    else:
+        params = {"user_name": search_value}
+    user = db.get_user(params)
+    if user:
+        user = user[0]
+        user_object = {"id": user[0],
+                       "user_name": user[1],
+                       "first_name": user[2],
+                        "last_name": user[3],
+                        "password_hash": user[4]
+                        }
+        return user_object
+    return {}
+
+
+def add_user(user_name, password_hash, first_name="", last_name="") -> int:
+    """Add a user to the database and return the user id."""
+    params = {'user_name': user_name,
+              'first_name': first_name,
+              'last_name': last_name,
+              'password_hash': password_hash}
+    db.add_user(params)
+    return get_user(user_name)["id"]
+
+
 def get_movies(user_id=None):
     """Return a dictionary of movie dictionaries for the given user.
 

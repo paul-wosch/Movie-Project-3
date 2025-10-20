@@ -13,10 +13,10 @@ from cli_style import (cprint_default,
                        cprompt,
                        clear_screen)
 import api_client as api
+import auth
 
-# Modify after implementing user management
 DEFAULT_USER_ID = 1
-CURRENT_USER_ID = DEFAULT_USER_ID
+current_user_id = DEFAULT_USER_ID
 
 MENU_ENTRIES = [
     " 0. Exit",
@@ -29,14 +29,16 @@ MENU_ENTRIES = [
     " 7. Search movie",
     " 8. Sort movies by rating",
     " 9. Sort movies by year",
-    "10. Filter movies"
+    "10. Filter movies",
+    "11. Not implemented",
+    "12. Log in / Switch user"
 ]
 
-MENU_INDICES_ON_NO_DATA = {0,2}
-MENU_INDICES_ON_NO_USER = {0}
+MENU_INDICES_ON_NO_DATA = {0, 2, 12}
+MENU_INDICES_ON_NO_USER = {0, 12}
 ALL_MENU_INDICES = set(range(len(MENU_ENTRIES)))
 DEACTIVATED_MENU_INDICES_ON_NO_DATA = ALL_MENU_INDICES - MENU_INDICES_ON_NO_DATA
-
+DEACTIVATED_MENU_INDICES_ON_NO_USER = ALL_MENU_INDICES - MENU_INDICES_ON_NO_USER
 
 # ---------------------------------------------------------------------
 # CUSTOM EXCEPTIONS
@@ -71,15 +73,22 @@ class NoRecordsFoundError(BaseException):
 def show_menu(active="0"):
     """Display the main menu with different options
     and ask for user's choice."""
-    current_user = CURRENT_USER_ID
-    inactive_menu_items = DEACTIVATED_MENU_INDICES_ON_NO_DATA
+    current_username = data_processing.get_user(current_user_id, True)["user_name"]
     # Display the heading always with the menu.
     cprint_default("********** My Movies Database **********\n")
     cprint_default("Menu:")
     # Build the menu entries from a list of menu items.
     for i, entry in enumerate(MENU_ENTRIES):
-        # Turn off menu entry if no movie ratings found for user
-        if not user_has_movie_ratings(current_user) and i in inactive_menu_items:
+        # Show username in entry 12
+        if i == 12:
+            entry += f" (Current user: {current_username})"
+        # Turn off menu entry if default user is logged in or
+        if (is_default_user(current_user_id)
+                and i in DEACTIVATED_MENU_INDICES_ON_NO_USER):
+            cprint_inactive(entry)
+        # ...no movie ratings found for user
+        elif (not user_has_movie_ratings(current_user_id)
+                and i in DEACTIVATED_MENU_INDICES_ON_NO_DATA):
             cprint_inactive(entry)
         # Check if menu item is active and change color accordingly.
         elif int(active) == i and int(active) != 0:
@@ -88,30 +97,44 @@ def show_menu(active="0"):
             cprint_default(entry)
 
 
+def update_dispatch_table_and_choices_str(indices:set) -> tuple[dict, str]:
+    """Return updated dispatch table and choices string
+    for the given indices.
+    """
+    dispatch_table = DISPATCH_TABLE
+    choices_str = ", ".join(f"{entry}" for entry in sorted(list(indices)))
+    dispatch_table = {str(i): dispatch_table[str(i)] for i in indices}
+    return dispatch_table, choices_str
+
+
 def run_cli_with_input_listener():
     """Run the command line interface, showing the menu with input listener."""
-    dispatch_table = DISPATCH_TABLE
     while True:
         clear_screen()
-        if not user_has_movie_ratings():
-            entries_on = MENU_INDICES_ON_NO_DATA
-            choices_str = ", ".join(f"'{entry}'" for entry in sorted(list(entries_on)))
-            dispatch_table = {str(i): dispatch_table[str(i)] for i in entries_on}
+        # ---------------------------------------------------------
+        # Update dispatch table and choices string if applicable
+        if is_default_user(current_user_id):
+            indices = MENU_INDICES_ON_NO_USER
+            dispatch_table, choices_str = update_dispatch_table_and_choices_str(indices)
+        elif not user_has_movie_ratings(current_user_id):
+            indices = MENU_INDICES_ON_NO_DATA
+            dispatch_table, choices_str = update_dispatch_table_and_choices_str(indices)
         else:
+            dispatch_table = DISPATCH_TABLE
             choices_str = None
         show_menu()
-        user_choice = ask_for_user_choice(choices=choices_str)
+        choice = ask_for_user_choice(choices=choices_str)
         # Rebuild the menu with highlighted menu entry.
         # This only works for numbers.
-        if user_choice.isdigit():
+        if choice.isdigit():
             clear_screen()
-            show_menu(user_choice)
+            show_menu(choice)
         # Option to exit the program.
-        if user_choice == "0":
+        if choice == "0":
             say_bye()
             break
         # Execute the selected action.
-        if execute_user_choice(user_choice, dispatch_table=dispatch_table):
+        if execute_user_choice(choice, dispatch_table):
             pass
         # Intentionally pause after every action,
         # to allow for reading of information or error messages.
@@ -141,6 +164,44 @@ def ask_for_user_choice(entries=len(MENU_ENTRIES),
             range = f"{start}-{end}"
         choice = cprompt(f"\n{prompt} ({range}): ")
     return choice
+
+
+def ask_for_user_data(prompt, allow_blank=False):
+    """Ask for user data (username, first name, last name)
+    and return this value.
+
+    Return early when user wants to cancel and '..' is entered.
+    """
+    while True:
+        name = cprompt(f"{prompt} or '..' to cancel: ")
+        if name == "" and allow_blank is False:
+            cprint_error("Username should not be empty!")
+        elif name == "..":
+            print_action_cancelled()
+            raise CancelDialog
+        elif not is_valid_username(name):
+            cprint_error("Username should only contain letters and numbers!")
+        else:
+            break
+    return name
+
+
+def ask_for_password(prompt="Please enter your password"):
+    """Ask user for their password and return this value.
+
+    Return early when user wants to cancel and '..' is entered.
+    """
+    while True:
+        password = cprompt(f"{prompt} or '..' to cancel: ")
+        if password == "..":
+            print_action_cancelled()
+            raise CancelDialog
+        elif not is_valid_password(password):
+            cprint_error("Maximum password length is 72 characters!")
+            pass
+        else:
+            break
+    return password
 
 
 def ask_for_name():
@@ -388,7 +449,6 @@ def list_db_search_results(imdb_ids: list[str]) -> tuple[str, dict]:
     """Print retrieved movies from fuzzy search a user has rated and
     return a dispatch table to allow user to select.
     """
-    user_id = CURRENT_USER_ID
     dispatch_table = {}
     output = ""
     for i, imdb_id in enumerate(imdb_ids, start=1):
@@ -396,7 +456,7 @@ def list_db_search_results(imdb_ids: list[str]) -> tuple[str, dict]:
         movie_id = movie["id"]
         title = movie["title"]
         year = movie["year"]
-        rating_obj = data_processing.get_rating(user_id, movie_id)
+        rating_obj = data_processing.get_rating(current_user_id, movie_id)
         rating = rating_obj["rating"]
         emojis = " ".join(data_processing.get_country_emojis_for_movie(movie_id))
         dispatch_table[str(i)] = (imdb_id, title)
@@ -424,8 +484,7 @@ def fuzzy_search_movie_in_db(search_term=None) -> dict | bool:
 
     If no search term was given ask for a movie title or part of it.
     """
-    user_id = CURRENT_USER_ID
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     if not search_term:
         search_term = ask_for_name_part()
     # using sequence matcher, since we need both, imdb_id and title
@@ -449,6 +508,41 @@ def get_imdb_id_and_title_from_db_search():
 # ---------------------------------------------------------------------
 # CLI COMMAND FUNCTIONS
 # ---------------------------------------------------------------------
+def login_or_switch_user():
+    """Login or switch user.
+
+    Provide the option to create a new user
+    if username couldn't be found.
+    """
+    global current_user_id
+    should_create_new_user = False
+    # -----------------------------------------------------------------
+    # Get username and check for existing user
+    print()
+    username = ask_for_user_data("Please enter or choose your username")
+    if not user_exists(username):
+        cprint_error(f"Username {username} does not exist.")
+        if cprompt("Do you want to add this user? ('y'/'n'): ").lower() == "y":
+            should_create_new_user = True
+        else:
+            print_action_cancelled()
+            raise CancelDialog
+    # -----------------------------------------------------------------
+    # Prompt for password and add or authenticate user
+    password = ask_for_password()
+    if should_create_new_user:
+        hashed_password = auth.hash_password(password)
+        current_user_id = data_processing.add_user(username, hashed_password)
+        cprint_info(f"New user '{username}' has been added and logged in.")
+        return True
+    else:
+        if auth.authenticate_user(username, password):
+            current_user_id = data_processing.get_user(username)["id"]
+            cprint_info("You were successfully authenticated and logged in.")
+            return True
+    cprint_error("Authentication failed for the provided credentials!")
+    return False
+
 def format_movie_entry(title, year, rating, emojis):
     """Return a formatted movie entry."""
     emojis_str = " ".join(emojis)
@@ -460,10 +554,9 @@ def list_movies(*data, nested_call=False):
 
     The function can also be called by the sort or search function.
     """
-    user_id = CURRENT_USER_ID
     print()
     if not nested_call:
-        data = data_processing.get_movies(user_id=user_id)
+        data = data_processing.get_movies(current_user_id)
         cprint_output(f"{len(data)} movies in total:\n")
     else:
         # Because we passed the data as an optional argument...
@@ -482,8 +575,7 @@ def add_movie_rating():
     """Add movie rating to the Database."""
     # -----------------------------------------------------------------
     # Always return early if user wants to cancel / has entered '..'.
-    user_id = CURRENT_USER_ID
-    data_current_user = data_processing.get_movies(user_id)
+    data_current_user = data_processing.get_movies(current_user_id)
     data_all_users = data_processing.get_movies()
     movie_title = ask_for_name()
     # -----------------------------------------------------------------
@@ -539,7 +631,7 @@ def add_movie_rating():
     # Finally ask for rating / note and store it in the database.
     rating = ask_for_rating()
     note = ask_for_rating_note(update=False)
-    data_processing.add_rating(CURRENT_USER_ID, movie_id, rating, note)
+    data_processing.add_rating(current_user_id, movie_id, rating, note)
     cprint_info(f"Successfully added rating for movie '{movie_title}'.")
     if note:
         cprint_info("Note for the movie's rating has been added.")
@@ -569,10 +661,9 @@ def add_country_if_new(country_name):
 
 def delete_movie_rating():
     """Delete a movie's rating from the database."""
-    user_id = CURRENT_USER_ID
     imdb_id, movie_title = select_movie_from_api_or_db(source="db")
     movie_id = data_processing.get_movie(imdb_id)["id"]
-    data_processing.delete_rating(user_id, movie_id)
+    data_processing.delete_rating(current_user_id, movie_id)
     cprint_info(f"Rating for '{movie_title}' successfully deleted")
     return True
 
@@ -581,7 +672,6 @@ def update_movie_rating_and_note():
     """Update a movie’s rating (and note) in the database."""
     # -----------------------------------------------------------------
     # Let the user chose which movie to re-rate
-    user_id = CURRENT_USER_ID
     results = select_movie_from_api_or_db(source="db")
     if results == (False, False):
         raise MovieRatingNotFoundError
@@ -595,7 +685,7 @@ def update_movie_rating_and_note():
     rating = ask_for_rating(allow_blank=True, prompt=rating_prompt)
     # -----------------------------------------------------------------
     # Set action for the rating note depending on user's choice
-    previous_rating = data_processing.get_rating(user_id, movie_id)
+    previous_rating = data_processing.get_rating(current_user_id, movie_id)
     note = ask_for_rating_note()
     if note == -1:
         note = ""
@@ -611,7 +701,7 @@ def update_movie_rating_and_note():
         cprint_info(f"Leave previous rating of '{rating}' unchanged.")
     else:
         cprint_info(f"Change rating to '{rating}'.")
-    data_processing.update_rating(user_id, movie_id, rating, note)
+    data_processing.update_rating(current_user_id, movie_id, rating, note)
     cprint_info(f"Successfully updated rating entry for '{movie_title}'.")
     cprint_info(note_msg)
     return True
@@ -658,8 +748,7 @@ def get_movie_stats():
     best and worst movies.
     """
     # Get the data
-    user_id = CURRENT_USER_ID
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     ratings = get_ratings(data)
     average_rating = get_average_rating(ratings)
     median_rating = get_median_rating(ratings)
@@ -693,8 +782,7 @@ def get_movie_stats():
 
 def get_random_movie():
     """Show the details for a random movie."""
-    user_id = CURRENT_USER_ID
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     imdb_ids = get_imdb_ids(data)
     random_imdb_id = random.choice(imdb_ids)
     random_title = data[random_imdb_id]["title"]
@@ -715,8 +803,7 @@ def search_movie():
     If movie's title could not be found,
     display suggestions received by fuzzy search.
     """
-    user_id = CURRENT_USER_ID
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     search_term = ask_for_name_part()
     found = False
     for imdb_id, details in data.items():
@@ -752,8 +839,7 @@ def search_movie():
 
 def sort_movies_by_rating():
     """Sort movies in descending order by their rating."""
-    user_id = CURRENT_USER_ID
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     movies_sorted = dict(sorted(data.items(),
                            key=lambda item: item[1]["rating"],
                            reverse=True))
@@ -766,10 +852,9 @@ def sort_movies_by_year():
     Ask the user whether they want to see
     the latest movies first or last.
     """
-    user_id = CURRENT_USER_ID
     sort_order = ask_for_sort_order()
     is_reverse = bool(sort_order == "first")
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     movies_sorted = dict(sorted(data.items(),
                            key=lambda item: item[1]["year"],
                            reverse=is_reverse))
@@ -793,7 +878,6 @@ def filter_movies():
     """Filter movies based on specific criteria
     such as minimum rating, start year, and end year.
     """
-    user_id = CURRENT_USER_ID
     rating_threshold = ask_for_rating(
         allow_blank=True,
         prompt="\nEnter minimum rating (leave blank for no minimum rating): ")
@@ -803,7 +887,7 @@ def filter_movies():
     year_end = ask_for_year(
         allow_blank=True,
         prompt="Enter end year (leave blank for no end year): ")
-    data = data_processing.get_movies(user_id)
+    data = data_processing.get_movies(current_user_id)
     filtered_movies = dict(filter(
         lambda movie: apply_filter(
             movie,
@@ -883,9 +967,40 @@ def is_in_movies(data, imdb_id):
     return False
 
 
-def user_has_movie_ratings(user_id=CURRENT_USER_ID):
+def user_has_movie_ratings(user_id=DEFAULT_USER_ID):
     """Return True if user rated at least one movie."""
     if data_processing.count_movie_ratings_for_user(user_id) > 0:
+        return True
+    return False
+
+
+def is_default_user(user_id):
+    """Return True if the given user id is the default user."""
+    return user_id == DEFAULT_USER_ID
+
+
+def is_valid_username(username):
+    """Return True if username conforms to requirements.
+
+    Currently, a username should only consist of
+    alphanumeric characters.
+    """
+    return username.isalnum()
+
+
+def is_valid_password(password):
+    """Return True if password conforms to requirements.
+
+    Currently, there are no restrictions on password strength,
+    even an empty password is allowed. The only limitation is
+    bcrypt's maximum password length of 72 characters.
+    """
+    return len(password) <= 72
+
+
+def user_exists(username):
+    """Return True if the username exists in the database."""
+    if data_processing.get_user(username):
         return True
     return False
 
@@ -904,7 +1019,9 @@ DISPATCH_TABLE = {
     "7": search_movie,
     "8": sort_movies_by_rating,
     "9": sort_movies_by_year,
-    "10": filter_movies
+    "10": filter_movies,
+    "11": not_implemented,
+    "12": login_or_switch_user
 }
 
 
@@ -916,7 +1033,10 @@ def execute_user_choice(choice, dispatch_table=None):
     if dispatch_table is None:
         dispatch_table = DISPATCH_TABLE
     if DISPATCH_TABLE.get(choice) and not dispatch_table.get(choice):
-        cprint_error(f"\nAdd a movie rating to enable this function.")
+        if is_default_user(current_user_id):
+            cprint_error(f"\nPlease login to use this function.")
+        if not user_has_movie_ratings(current_user_id):
+            cprint_error(f"\nAdd a movie rating to enable this function.")
         return False
     if not dispatch_table.get(choice):
         invalid_choice()

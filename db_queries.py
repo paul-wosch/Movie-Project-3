@@ -99,11 +99,18 @@ CREATE_TABLE_RATINGS = """
         FOREIGN KEY(user_id) REFERENCES users(id),
         FOREIGN KEY(movie_id) REFERENCES movies(id)
     )"""
-ADD_DEFAULT_USER = "INSERT INTO users (user_name) VALUES ('default')"
+ADD_DEFAULT_USER = "INSERT OR IGNORE INTO users (user_name) VALUES ('default')"
 # ---------------------------------------------------------------------
 # CREATE
 # ---------------------------------------------------------------------
-ADD_USER = ""
+ADD_USER = """
+           INSERT INTO users (
+               user_name,
+               first_name,
+               last_name,
+               password_hash)
+           VALUES (:user_name, :first_name, :last_name, :password_hash)
+"""
 ADD_COUNTRY = "INSERT INTO countries (name, code) VALUES (:name, :code)"
 ADD_MOVIE = ("INSERT INTO movies (imdb_id, title, year, image_url, imdb_rating)"
              "VALUES (:imdb_id, :title, :year, :image_url, :imdb_rating)")
@@ -116,6 +123,8 @@ ADD_MOVIE_COUNTRY = """
 # ---------------------------------------------------------------------
 # READ
 # ---------------------------------------------------------------------
+GET_USER_BY_USERNAME = "SELECT * FROM users WHERE user_name = :user_name"
+GET_USER_BY_ID = "SELECT * FROM users WHERE id = :id"
 GET_MOVIES = """
     SELECT
         movies.id,
