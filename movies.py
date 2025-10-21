@@ -11,6 +11,7 @@ from cli_style import (cprint_default,
                        cprint_active,
                        cprint_inactive,
                        cprompt,
+                       cprompt_pw,
                        clear_screen)
 import api_client as api
 import auth
@@ -177,7 +178,6 @@ def ask_for_user_data(prompt, allow_blank=False):
         if name == "" and allow_blank is False:
             cprint_error("Username should not be empty!")
         elif name == "..":
-            print_action_cancelled()
             raise CancelDialog
         elif not is_valid_username(name):
             cprint_error("Username should only contain letters and numbers!")
@@ -192,9 +192,8 @@ def ask_for_password(prompt="Please enter your password"):
     Return early when user wants to cancel and '..' is entered.
     """
     while True:
-        password = cprompt(f"{prompt} or '..' to cancel: ")
+        password = cprompt_pw(f"{prompt} or '..' to cancel: ")
         if password == "..":
-            print_action_cancelled()
             raise CancelDialog
         elif not is_valid_password(password):
             cprint_error("Maximum password length is 72 characters!")
@@ -214,7 +213,6 @@ def ask_for_name():
         if movie_name == "":
             cprint_error("\nMovie name should not be empty!")
         elif movie_name == "..":
-            print_action_cancelled()
             raise CancelDialog
         else:
             break
@@ -232,7 +230,6 @@ def ask_for_name_part():
         if movie_name == "":
             cprint_error("Movie name or part of it should not be empty!")
         elif movie_name == "..":
-            print_action_cancelled()
             raise CancelDialog
         else:
             break
@@ -254,7 +251,6 @@ def ask_for_rating(allow_blank=False,
                 return None
             # Action should be cancelled.
             if rating == "..":
-                print_action_cancelled()
                 raise CancelDialog
             # Rating should be within valid range.
             if not 0 <= float(rating) <= 10:
@@ -283,7 +279,6 @@ def ask_for_year(allow_blank=False,
                 return None
             # Action should be cancelled.
             if year == "..":
-                print_action_cancelled()
                 raise CancelDialog
             # Return year if input is valid.
             if date.today().year < int(year):
@@ -311,7 +306,6 @@ def ask_for_country(allow_blank=False,
                 return None
             # Action should be cancelled.
             if country == "..":
-                print_action_cancelled()
                 raise CancelDialog
             # Return country name if input is valid.
             return country
@@ -328,7 +322,6 @@ def ask_for_sort_order():
                       "\nEnter 'first' or 'last: ")
             sort_order = cprompt(prompt).lower()
             if sort_order == "..":
-                print_action_cancelled()
                 raise CancelDialog
             if not sort_order in accepted_input:
                 raise InvalidInputError
@@ -357,7 +350,6 @@ def ask_for_rating_note(update=True):
     prompt += "Enter your note here: "
     note = cprompt(prompt)
     if note == "..":
-        print_action_cancelled()
         raise CancelDialog
     elif note == "" and update:
         return 1 # leave note unchanged
@@ -424,7 +416,6 @@ def select_movie_from_api_or_db(search_term=None, source="api"):
                                          start_at_zero=False,
                                          prompt="Please select a movie")
             if choice == "..":
-                print_action_cancelled()
                 raise CancelDialog
             elif is_valid_user_choice(choice, dispatch_table):
                 break
@@ -525,11 +516,17 @@ def login_or_switch_user():
         if cprompt("Do you want to add this user? ('y'/'n'): ").lower() == "y":
             should_create_new_user = True
         else:
-            print_action_cancelled()
             raise CancelDialog
     # -----------------------------------------------------------------
     # Prompt for password and add or authenticate user
-    password = ask_for_password()
+    while True:
+        password = ask_for_password("Enter your password")
+        if not should_create_new_user:
+            break
+        confirmed_password = ask_for_password("Confirm your password")
+        if password == confirmed_password:
+            break
+        cprint_error("Passwords do not match. Please try again!")
     if should_create_new_user:
         hashed_password = auth.hash_password(password)
         current_user_id = data_processing.add_user(username, hashed_password)
@@ -1043,7 +1040,10 @@ def execute_user_choice(choice, dispatch_table=None):
         return False
     try:
         dispatch_table[choice]()
-    except (CancelDialog, MovieRatingNotFoundError):
+    except CancelDialog:
+        print_action_cancelled()
+        return True
+    except MovieRatingNotFoundError:
         return True
     return True
 

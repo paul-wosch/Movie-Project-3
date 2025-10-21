@@ -19,10 +19,12 @@ Recommended use:
 - dedicated functions for each style tag
 - cprint_info, cprint_error etc.
 - cprompt for user input
+- cprompt_pw for masked password prompts
 
 Any of the above methods can be combined as needed,
 depending on the use case.
 """
+import maskpass
 import os
 
 
@@ -108,7 +110,7 @@ def cprint_inactive(text, **kwargs):
 
 
 def cprompt(text, strip=True):
-    """Prompt the given text with style 'PROMPT'.
+    """Prompt the given text with style 'PROMPT' and return user input.
 
     Set argument 'strip' to False,
     if you want to deactivate white space stripping.
@@ -119,6 +121,13 @@ def cprompt(text, strip=True):
     else:
         return prompt
 
+
+def cprompt_pw(text="Enter your password: ", **kwargs):
+    """Prompt for a password with the given text and return user input
+    using style 'PROMPT' and password masking."""
+    prompt = f"{PROMPT}{text}{OFF}"
+    password = maskpass.askpass(prompt=prompt, mask="*")
+    return password
 
 def main():
     """Main function for testing when running the script under main."""
