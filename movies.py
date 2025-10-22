@@ -1,3 +1,5 @@
+from sqlalchemy.exc import SQLAlchemyError
+from requests import exceptions as requests_exceptions
 import random
 import difflib
 import statistics
@@ -1042,7 +1044,7 @@ def execute_user_choice(choice, dispatch_table=None):
             cprint_error(f"\nPlease login to use this function.")
         if not user_has_movie_ratings(current_user_id):
             cprint_error(f"\nAdd a movie rating to enable this function.")
-        return False
+        # return False
     if not dispatch_table.get(choice):
         invalid_choice()
         return False
@@ -1050,9 +1052,15 @@ def execute_user_choice(choice, dispatch_table=None):
         dispatch_table[choice]()
     except CancelDialog:
         print_action_cancelled()
-        return True
     except MovieRatingNotFoundError:
-        return True
+        pass
+    except requests_exceptions.Timeout:
+        cprint_error("Connection to the OMDB API has timed out.")
+    except requests_exceptions.ConnectionError:
+        cprint_error("Couldn't connect to the OMDB API.")
+    except SQLAlchemyError as e:
+        cprint_error("The following exception was raised during a database operation:")
+        cprint_inactive(f"{e}")
     return True
 
 

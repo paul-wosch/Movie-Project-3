@@ -2,8 +2,6 @@
 import requests
 from dotenv import dotenv_values
 
-import cli_style as style
-
 # OMDB
 OMDB_API_KEY = dotenv_values(".env").get("OMDB_API_KEY", None)
 OMDB_BASE_URL = "http://www.omdbapi.com/"
@@ -21,11 +19,7 @@ def retrieve_data_from_api(base_url,
                            payload=None) -> requests.Response | None:
     """Return response from REST API for given endpoint and payload."""
     url = base_url + endpoint
-    try:
-        return requests.get(url, headers=headers, params=payload, timeout=TIMEOUT)
-    except requests.exceptions.Timeout:
-        print(f"{style.ERROR}Request to {url} timed out{style.OFF}")
-    return None
+    return requests.get(url, headers=headers, params=payload, timeout=TIMEOUT)
 
 
 def fetch_omdb_api(payload):

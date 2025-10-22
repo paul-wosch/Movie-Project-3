@@ -1,5 +1,4 @@
 import pycountry
-from sqlalchemy.exc import SQLAlchemyError
 import database as db
 
 YEAR_STR_LENGTH = 4
