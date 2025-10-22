@@ -77,13 +77,12 @@ def show_menu(active="0"):
     and ask for user's choice."""
     current_username = data_processing.get_user(current_user_id, True)["user_name"]
     # Display the heading always with the menu.
-    cprint_default("********** My Movies Database **********\n")
+    cprint_default("********** My Movies Database **********")
+    cprint_default("Currently logged in: ", end="")
+    cprint_output(f"{current_username}\n")
     cprint_default("Menu:")
     # Build the menu entries from a list of menu items.
     for i, entry in enumerate(MENU_ENTRIES):
-        # Show username in entry 12
-        if i == 12:
-            entry += f" (Current user: {current_username})"
         # Turn off menu entry if default user is logged in or
         if (is_default_user(current_user_id)
                 and i in DEACTIVATED_MENU_INDICES_ON_NO_USER):
