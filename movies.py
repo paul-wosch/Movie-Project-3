@@ -15,6 +15,7 @@ from cli_style import (cprint_default,
                        clear_screen)
 import api_client as api
 import auth
+from render_user_page import render_webpage
 
 DEFAULT_USER_ID = 1
 current_user_id = DEFAULT_USER_ID
@@ -31,7 +32,7 @@ MENU_ENTRIES = [
     " 8. Sort movies by rating",
     " 9. Sort movies by year",
     "10. Filter movies",
-    "11. Not implemented",
+    "11. Generate website",
     "12. Log in / Switch user"
 ]
 
@@ -510,7 +511,7 @@ def login_or_switch_user():
     # -----------------------------------------------------------------
     # Get username and check for existing user
     print()
-    username = ask_for_user_data("Please enter or choose your username")
+    username = ask_for_user_data("Please enter or choose your username").lower()
     if not user_exists(username):
         cprint_error(f"Username {username} does not exist.")
         if cprompt("Do you want to add this user? ('y'/'n'): ").lower() == "y":
@@ -539,6 +540,7 @@ def login_or_switch_user():
             return True
     cprint_error("Authentication failed for the provided credentials!")
     return False
+
 
 def format_movie_entry(title, year, rating, emojis):
     """Return a formatted movie entry."""
@@ -899,6 +901,13 @@ def filter_movies():
     list_movies(filtered_movies_sorted, nested_call=True)
 
 
+def generate_website():
+    """Generate webpage showing all movies rated by the given user."""
+    username = data_processing.get_user(current_user_id, find_by_id=True)["user_name"]
+    render_webpage(current_user_id)
+    cprint_info(f"\nWebsite for '{username}' was generated successfully.")
+
+
 # ---------------------------------------------------------------------
 # SIMPLE LIST AND DICT RETURNING FUNCTIONS
 # ---------------------------------------------------------------------
@@ -1017,7 +1026,7 @@ DISPATCH_TABLE = {
     "8": sort_movies_by_rating,
     "9": sort_movies_by_year,
     "10": filter_movies,
-    "11": not_implemented,
+    "11": generate_website,
     "12": login_or_switch_user
 }
 
