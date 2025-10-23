@@ -1,13 +1,17 @@
 """Provide API connection(s) and fetch data from online services."""
+from pathlib import Path
 import requests
 from dotenv import dotenv_values
-from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 # OMDB
 DOTENV_FILE_PATH = (PROJECT_ROOT / ".env").resolve()
 OMDB_API_KEY = dotenv_values(DOTENV_FILE_PATH).get("OMDB_API_KEY", None)
 OMDB_BASE_URL = "http://www.omdbapi.com/"
+# API Ninjas
+AN_API_KEY = dotenv_values(".env").get("API_NINJAS_KEY", None)
+AN_BASE_URL = "https://api.api-ninjas.com/v1/"
+AN_HEADERS = {"X-Api-Key": AN_API_KEY}
 
 TIMEOUT = 4
 
@@ -43,9 +47,9 @@ def find_movies(search_string):
     return []
 
 
-def fetch_movie_details(imdbID):
+def fetch_movie_details(imdb_id):
     """Return a movie object for the given imdbID."""
-    payload = {"i": imdbID}
+    payload = {"i": imdb_id}
     response = fetch_omdb_api(payload)
     if response:
         return response.json()
@@ -66,7 +70,6 @@ def get_country_flag_url(country_code):
 
 def main():
     """Main function for testing when running the script under main."""
-    pass
 
 
 if __name__ == "__main__":

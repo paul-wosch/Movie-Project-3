@@ -1,8 +1,9 @@
+"""Provide query interface to the database."""
+from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from myapp.db import db_queries
-from pathlib import Path
 
 # Get the project root and go up three levels
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -79,10 +80,9 @@ def get_movies(params=None):
         query = db_queries.GET_MOVIES
         movies = query_database(query, params)
         return movies
-    else:
-        query = db_queries.GET_MOVIES_ALL_USERS
-        movies = query_database(query, params={})
-        return movies
+    query = db_queries.GET_MOVIES_ALL_USERS
+    movies = query_database(query, params={})
+    return movies
 
 
 def get_movie(params):
@@ -181,7 +181,6 @@ initialize_database()
 
 def main():
     """Main function for testing when running the script under main."""
-    pass
 
 
 if __name__ == "__main__":

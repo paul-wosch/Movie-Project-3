@@ -6,9 +6,9 @@ from myapp.models.data_processing import get_user
 
 def hash_password(password):
     """Return a hashed password as byte decoded string."""
-    bytes = password.encode("utf-8")
+    pw_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(bytes, salt)
+    hashed_password = bcrypt.hashpw(pw_bytes, salt)
     return hashed_password.decode("utf-8")
 
 
@@ -22,8 +22,6 @@ def authenticate_user(user_name, password):
 
 def main():
     """Main function for testing when running the script under main."""
-    # print(authenticate_user("test", ""))
-    pass
 
 
 if __name__ == "__main__":

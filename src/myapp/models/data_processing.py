@@ -1,3 +1,8 @@
+"""Provide preprocessed data retrieved from database and API.
+
+Designed to work without relying on traditional object-oriented
+programming or SQLAlchemy's ORM.
+"""
 import pycountry
 from myapp.db import database as db
 
@@ -89,11 +94,11 @@ def get_country_by_name(search_string):
     if country:
         country = country[0]
         # Extract attributes
-        id = country[0]
+        country_id = country[0]
         name = country[1]
         code = country[2]
         emoji = get_country_emoji(name)
-        country_dict = {"id": id,
+        country_dict = {"id": country_id,
                         "name": name,
                         "code": code,
                         "emoji": emoji
@@ -297,7 +302,6 @@ def count_movie_ratings_for_user(user_id):
 
 def main():
     """Main function for testing when running the script under main."""
-    pass
 
 
 if __name__ == "__main__":

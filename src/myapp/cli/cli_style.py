@@ -24,9 +24,9 @@ Recommended use:
 Any of the above methods can be combined as needed,
 depending on the use case.
 """
-import maskpass
 import os
 import termios
+import maskpass
 
 
 def clear_screen():
@@ -119,11 +119,10 @@ def cprompt(text, strip=True):
     prompt = input(f"{PROMPT}{text}{OFF}")
     if strip:
         return prompt.strip()
-    else:
-        return prompt
+    return prompt
 
 
-def cprompt_pw(text="Enter your password: ", **kwargs):
+def cprompt_pw(text="Enter your password: "):
     """Prompt for a password with the given text and return user input
     using style 'PROMPT' and password masking.
 
@@ -131,7 +130,7 @@ def cprompt_pw(text="Enter your password: ", **kwargs):
     """
     prompt = f"{PROMPT}{text}{OFF}"
     try:
-        password = maskpass.askpass(prompt=prompt, mask="*")
+        password = maskpass.askpass(prompt=prompt, mask="*", )
     except termios.error:
         cprint_error("\nFull terminal (TTY) couldn't be recognized.")
         cprint_info("Falling back to unmasked password input...")
@@ -141,7 +140,6 @@ def cprompt_pw(text="Enter your password: ", **kwargs):
 
 def main():
     """Main function for testing when running the script under main."""
-    pass
 
 
 if __name__ == "__main__":

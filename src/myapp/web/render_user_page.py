@@ -1,7 +1,6 @@
 """Provide a template based webpage generator
 to display movies rated by a user.
 """
-# from os import path
 from pathlib import Path
 from myapp.models.data_processing import get_movies, get_user, get_country_emojis_for_movie
 
@@ -18,7 +17,8 @@ OUTPUT_PATH = (PROJECT_ROOT / OUTPUT_FOLDER).resolve()
 PLACEHOLDER_TITLE = "__TEMPLATE_TITLE__"
 PLACEHOLDER_MAIN = "        __TEMPLATE_MOVIE_GRID__"
 INDENTATION = "    "
-DUMMY_POSTER_URL = "https://images.template.net/wp-content/uploads/2017/02/17221912/Printable-Blank-Movie-Poster.jpg"
+DUMMY_POSTER_URL = ("https://images.template.net/wp-content/"
+                    "uploads/2017/02/17221912/Printable-Blank-Movie-Poster.jpg")
 IMDB_URL = "https://imdb.com/title/"
 
 
@@ -79,7 +79,7 @@ def serialize_movie_to_html(imdb_id, movie_details):
     output += f'\n{indent(3)}<div class="movie">'
     output += f'<a href="{imdb_url}" title="{note}" target="_blank">'
     output += f'\n{indent(4)}<img class="movie-poster" src="{image_url}"/>'
-    output += f'</a>'
+    output += '</a>'
     output += f'\n{indent(4)}<div class="movie-title">{title}</div>'
     output += f'\n{indent(4)}<div class="movie-year">{year}</div>'
     output += f'\n{indent(4)}<div class="rating">{rating}</div>'
@@ -117,9 +117,7 @@ def render_webpage(user_id):
 
 def main():
     """Main function for testing when running the script under main."""
-    pass
 
 
 if __name__ == "__main__":
     main()
-

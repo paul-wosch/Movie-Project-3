@@ -1,9 +1,11 @@
-from sqlalchemy.exc import SQLAlchemyError
-from requests import exceptions as requests_exceptions
+"""Provide CLI menu and user interaction dialogues."""
 import random
 import difflib
 import statistics
 from datetime import date
+
+from sqlalchemy.exc import SQLAlchemyError
+from requests import exceptions as requests_exceptions
 
 from myapp.models import data_processing
 from myapp.cli.cli_style import (cprint_default,
@@ -165,10 +167,10 @@ def ask_for_user_choice(entries=len(MENU_ENTRIES),
             start = 1
             end = entries
         if entries == 1:
-            range = f"{start}"
+            range_str = f"{start}"
         else:
-            range = f"{start}-{end}"
-        choice = cprompt(f"\n{prompt} ({range}): ")
+            range_str = f"{start}-{end}"
+        choice = cprompt(f"\n{prompt} ({range_str}): ")
     return choice
 
 
@@ -200,9 +202,8 @@ def ask_for_password(prompt="Please enter your password"):
         password = cprompt_pw(f"{prompt} or '..' to cancel: ")
         if password == "..":
             raise CancelDialog
-        elif not is_valid_password(password):
+        if not is_valid_password(password):
             cprint_error("Maximum password length is 72 characters!")
-            pass
         else:
             break
     return password
@@ -356,9 +357,9 @@ def ask_for_rating_note(update=True):
     note = cprompt(prompt)
     if note == "..":
         raise CancelDialog
-    elif note == "" and update:
+    if note == "" and update:
         return 1 # leave note unchanged
-    elif note == "DELETE" and update:
+    if note == "DELETE" and update:
         return -1 # delete note
     return note # add or update note
 
@@ -384,7 +385,7 @@ def list_api_search_results(search_term: str) -> tuple[str, dict]:
         for i, movie in enumerate(results, start=1):
             imdb_id = movie["imdb_id"]
             title = movie["title"]
-            type = movie["type"]
+            media_type = movie["type"]
             extended_movie_obj = get_movie_details_from_api(imdb_id)[imdb_id]
             countries = extended_movie_obj["country"]
             year = extended_movie_obj["year"]
@@ -395,9 +396,9 @@ def list_api_search_results(search_term: str) -> tuple[str, dict]:
                 data_processing.get_country_emoji(country)
                 for country in countries
             )
-            if emojis == False:
+            if not emojis:
                 emojis = movie["imdbID"]["country"]
-            output += (f"\n{i:>3}: {title} ({year}) [{type}] - {emojis}")
+            output += (f"\n{i:>3}: {title} ({year}) [{media_type}] - {emojis}")
     return output, dispatch_table
 
 
@@ -422,7 +423,7 @@ def select_movie_from_api_or_db(search_term=None, source="api"):
                                          prompt="Please select a movie")
             if choice == "..":
                 raise CancelDialog
-            elif is_valid_user_choice(choice, dispatch_table):
+            if is_valid_user_choice(choice, dispatch_table):
                 break
         if choice:
             imdb_id, title = dispatch_table[choice]
@@ -489,7 +490,7 @@ def fuzzy_search_movie_in_db(search_term=None) -> dict | bool:
     suggestions = sequence_matcher(search_term, movies_dict, 4, 0.3)
     if len(suggestions) == 0:
         cprint_info(f"A movie containing '{search_term}' could not be found.")
-        return dict()
+        return {}
     return suggestions
 
 
@@ -538,11 +539,10 @@ def login_or_switch_user():
         current_user_id = data_processing.add_user(username, hashed_password)
         cprint_info(f"New user '{username}' has been added and logged in.")
         return True
-    else:
-        if auth.authenticate_user(username, password):
-            current_user_id = data_processing.get_user(username)["id"]
-            cprint_info("You were successfully authenticated and logged in.")
-            return True
+    if auth.authenticate_user(username, password):
+        current_user_id = data_processing.get_user(username)["id"]
+        cprint_info("You were successfully authenticated and logged in.")
+        return True
     cprint_error("Authentication failed for the provided credentials!")
     return False
 
@@ -566,7 +566,7 @@ def list_movies(*data, nested_call=False):
         # Because we passed the data as an optional argument...
         # ...we need to unpack tuple of one element.
         data = data[0]
-    for imdb_id, details in data.items():
+    for _, details in data.items():
         movie_id = details["movie_id"]
         title = details["title"]
         year = details["year"]
@@ -674,12 +674,14 @@ def delete_movie_rating():
 
 def update_movie_rating_and_note():
     """Update a movie’s rating (and note) in the database."""
+    movie_id = ""
+    movie_title = ""
     # -----------------------------------------------------------------
     # Let the user chose which movie to re-rate
     results = select_movie_from_api_or_db(source="db")
     if results == (False, False):
         raise MovieRatingNotFoundError
-    elif any(results):
+    if any(results):
         imdb_id, movie_title = results
         movie_id = data_processing.get_movie(imdb_id)["id"]
     # -----------------------------------------------------------------
@@ -693,14 +695,14 @@ def update_movie_rating_and_note():
     note = ask_for_rating_note()
     if note == -1:
         note = ""
-        note_msg = (f"Note for the movie's rating has been deleted.")
+        note_msg = "Note for the movie's rating has been deleted."
     elif note == 1:
         note = previous_rating["note"]
-        note_msg = (f"Note for the movie's rating has been left unchanged.")
+        note_msg = "Note for the movie's rating has been left unchanged."
     else:
-        note_msg = (f"Note for the movie's rating has been updated.")
+        note_msg = "Note for the movie's rating has been updated."
     # Update the rating or keep previous value
-    if rating == None:
+    if rating is None:
         rating = previous_rating["rating"]
         cprint_info(f"Leave previous rating of '{rating}' unchanged.")
     else:
@@ -829,7 +831,7 @@ def search_movie():
         movies_dict = get_imdb_ids_with_title(data)
         suggestions = sequence_matcher(search_term, movies_dict, 4, 0.3)
         # show only if fuzzy search finds alternatives
-        if not len(suggestions) == 0:
+        if len(suggestions) != 0:
             cprint_output("\nDid you mean:\n")
             for imdb_id, title in suggestions.items():
                 movie_id = data[imdb_id]["movie_id"]
@@ -1045,10 +1047,10 @@ def execute_user_choice(choice, dispatch_table=None):
         dispatch_table = DISPATCH_TABLE
     if DISPATCH_TABLE.get(choice) and not dispatch_table.get(choice):
         if is_default_user(current_user_id):
-            cprint_error(f"\nPlease login to use this function.")
+            cprint_error("\nPlease login to use this function.")
             return False
         if not user_has_movie_ratings(current_user_id):
-            cprint_error(f"\nAdd a movie rating to enable this function.")
+            cprint_error("\nAdd a movie rating to enable this function.")
             return False
     if not dispatch_table.get(choice):
         invalid_choice()
@@ -1073,7 +1075,6 @@ def execute_user_choice(choice, dispatch_table=None):
 
 def main():
     """Main function for testing when running the script under main."""
-    pass
 
 
 if __name__ == "__main__":

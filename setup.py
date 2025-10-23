@@ -1,3 +1,9 @@
+"""Configure the myapp package for installation and distribution.
+
+It uses setuptools to package the application located in
+the src/ directory.
+"""
+
 from setuptools import setup, find_packages
 
 setup(
