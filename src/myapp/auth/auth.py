@@ -1,7 +1,7 @@
 """Provide user authentication."""
 import bcrypt
 
-from data_processing import get_user
+from myapp.models.data_processing import get_user
 
 
 def hash_password(password):

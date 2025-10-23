@@ -1,5 +1,5 @@
 import pycountry
-import database as db
+from myapp.db import database as db
 
 YEAR_STR_LENGTH = 4
 

@@ -1,13 +1,20 @@
 """Provide a template based webpage generator
 to display movies rated by a user.
 """
-from os import path
-from data_processing import get_movies, get_user, get_country_emojis_for_movie
+# from os import path
+from pathlib import Path
+from myapp.models.data_processing import get_movies, get_user, get_country_emojis_for_movie
 
-TEMPLATE_PATH = "templates"
+# Get the project root and go up three levels
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# Set paths to template and output folder
+TEMPLATE_FOLDER = "templates"
+TEMPLATE_PATH = (PROJECT_ROOT / TEMPLATE_FOLDER).resolve()
 TEMPLATE_FILE = "template.html"
-TEMPLATE_FILE_PATH = path.join(TEMPLATE_PATH, TEMPLATE_FILE)
-OUTPUT_PATH = "static"
+TEMPLATE_FILE_PATH = (TEMPLATE_PATH / TEMPLATE_FILE).resolve()
+OUTPUT_FOLDER = "static"
+OUTPUT_PATH = (PROJECT_ROOT / OUTPUT_FOLDER).resolve()
+
 PLACEHOLDER_TITLE = "__TEMPLATE_TITLE__"
 PLACEHOLDER_MAIN = "        __TEMPLATE_MOVIE_GRID__"
 INDENTATION = "    "
@@ -30,7 +37,7 @@ def write_file(file_name, content):
 
 def write_html_file(template_file, new_file_name, title, content):
     """Write a new html file for the given content."""
-    new_file_path = path.join(OUTPUT_PATH, new_file_name)
+    new_file_path = (OUTPUT_PATH / new_file_name).resolve()
     html_template = load_template(template_file)
     html_with_title = html_template.replace(PLACEHOLDER_TITLE, title)
     html_with_content = html_with_title.replace(PLACEHOLDER_MAIN, content)

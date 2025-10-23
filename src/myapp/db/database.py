@@ -1,12 +1,17 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-import db_queries
+from myapp.db import db_queries
+from pathlib import Path
 
+# Get the project root and go up three levels
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# Set path to database
+db_path = (PROJECT_ROOT / "data" / "movies.sqlite3").resolve()
+# Use 3 slashes for absolute path; ensure POSIX format
+DB_URL = f"sqlite:///{db_path.as_posix()}"
 # Show SQL queries in the CLI
 ECHO_SQL = False
-# Define the database URL
-DB_URL = "sqlite:///data/movies.sqlite3"
 # Queries for database initialization
 DB_INIT_QUERIES = [
     db_queries.CREATE_TABLE_USERS,

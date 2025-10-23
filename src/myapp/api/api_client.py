@@ -1,14 +1,13 @@
 """Provide API connection(s) and fetch data from online services."""
 import requests
 from dotenv import dotenv_values
+from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 # OMDB
-OMDB_API_KEY = dotenv_values(".env").get("OMDB_API_KEY", None)
+DOTENV_FILE_PATH = (PROJECT_ROOT / ".env").resolve()
+OMDB_API_KEY = dotenv_values(DOTENV_FILE_PATH).get("OMDB_API_KEY", None)
 OMDB_BASE_URL = "http://www.omdbapi.com/"
-# API Ninjas
-AN_API_KEY = dotenv_values(".env").get("API_NINJAS_KEY", None)
-AN_BASE_URL = "https://api.api-ninjas.com/v1/"
-AN_HEADERS = {"X-Api-Key": AN_API_KEY}
 
 TIMEOUT = 4
 

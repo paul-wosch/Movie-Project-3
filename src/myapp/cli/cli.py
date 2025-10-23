@@ -5,19 +5,19 @@ import difflib
 import statistics
 from datetime import date
 
-import data_processing
-from cli_style import (cprint_default,
-                       cprint_info,
-                       cprint_error,
-                       cprint_output,
-                       cprint_active,
-                       cprint_inactive,
-                       cprompt,
-                       cprompt_pw,
-                       clear_screen)
-import api_client as api
-import auth
-from render_user_page import render_webpage
+from myapp.models import data_processing
+from myapp.cli.cli_style import (cprint_default,
+                                 cprint_info,
+                                 cprint_error,
+                                 cprint_output,
+                                 cprint_active,
+                                 cprint_inactive,
+                                 cprompt,
+                                 cprompt_pw,
+                                 clear_screen)
+from myapp.api import api_client as api
+from myapp.auth import auth
+from myapp.web.render_user_page import render_webpage
 
 DEFAULT_USER_ID = 1
 current_user_id = DEFAULT_USER_ID
@@ -70,6 +70,9 @@ class MovieRatingNotFoundError(BaseException):
 class NoRecordsFoundError(BaseException):
     """Raised when no database records are found (for the current user)."""
 
+
+class NoMoviesFoundError(BaseException):
+    """Raised when no movies could be found by API search."""
 
 # ---------------------------------------------------------------------
 # CLI MENU
@@ -426,8 +429,9 @@ def select_movie_from_api_or_db(search_term=None, source="api"):
             return imdb_id, title
     else:
         if source == "api":
-            cprint_info(f"Online search couldn't"
-                        f"find any movies matching '{search_term}'")
+            cprint_info(f"Online search couldn't "
+                        f"find any movies matching '{search_term}'.")
+            raise NoMoviesFoundError
     return (False, False)
 
 
@@ -1042,9 +1046,10 @@ def execute_user_choice(choice, dispatch_table=None):
     if DISPATCH_TABLE.get(choice) and not dispatch_table.get(choice):
         if is_default_user(current_user_id):
             cprint_error(f"\nPlease login to use this function.")
+            return False
         if not user_has_movie_ratings(current_user_id):
             cprint_error(f"\nAdd a movie rating to enable this function.")
-        # return False
+            return False
     if not dispatch_table.get(choice):
         invalid_choice()
         return False
@@ -1053,6 +1058,8 @@ def execute_user_choice(choice, dispatch_table=None):
     except CancelDialog:
         print_action_cancelled()
     except MovieRatingNotFoundError:
+        pass
+    except NoMoviesFoundError:
         pass
     except requests_exceptions.Timeout:
         cprint_error("Connection to the OMDB API has timed out.")
