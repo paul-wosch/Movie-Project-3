@@ -1,5 +1,7 @@
 # Movie Project 3 aka _My Movies Database_
 
+![Python](https://img.shields.io/badge/-Python-blue?logo=python&logoColor=white)
+
 ## 📝 Description
 
 A Python CLI app to track and analyze your movie ratings. Add, edit, and delete reviews with notes, fetch movie details via OMDB API, and generate a shareable HTML page with posters and country flags—all with secure multi-user login.
