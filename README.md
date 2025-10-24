@@ -15,7 +15,7 @@ A Python CLI app to track and analyze your movie ratings. Add, edit, and delete 
 ## 🛠️ Tech Stack
 - 🐍 **Language**: Python 3
 - 💾 **Database**: SQLite for persistent data storage
-- 🖥️ **Frontend**: CLI with colored output using `colorama` or similar
+- 🖥️ **Frontend**: CLI with colored output powered by a custom Python module
 - 🌐 **Web Export**: Static HTML generation with custom templates and CSS
 - 🔌 **API**: OMDB API for movie metadata
 - 🔒 **Security**: bcrypt for password hashing, `.env` for API key isolation
