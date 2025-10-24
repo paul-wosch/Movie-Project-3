@@ -1,5 +1,11 @@
+# sqlite database
+data/movies.sqlite3
+
 # generated websites
 static/*.html
+
+# MacOS hidden system file from finder application
+.DS_Store
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

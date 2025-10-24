@@ -1,0 +1,8 @@
+bcrypt==5.0.0
+emoji==2.15.0
+maskpass==0.3.7
+pycountry==24.6.1
+python-dotenv==1.1.1
+requests==2.32.5
+setuptools==80.9.0
+SQLAlchemy==2.0.43
