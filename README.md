@@ -20,8 +20,6 @@ A Python CLI app to track and analyze your movie ratings. Add, edit, and delete 
 - 🔌 **API**: OMDB API for movie metadata
 - 🔒 **Security**: bcrypt for password hashing, `.env` for API key isolation
 
-This keeps features user-focused and tech stack implementation-focused.
-
 ## 📦 Key Dependencies
 
 - `bcrypt==5.0.0` – Secure password hashing
