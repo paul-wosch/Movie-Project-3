@@ -124,8 +124,7 @@ Ensure your code follows PEP 8 and includes appropriate docstrings.
 
 - **OMDB API data validation**: Movie data retrieved from the OMDB API should be validated before being stored in the database to ensure consistency and prevent malformed entries.
 - **Country flag display**: Flag emojis may not render correctly in all terminals. As an alternative, display ISO alpha-2 country codes (e.g., US, DE) when emoji support is unreliable.
-- **Input validation**: Implement custom exceptions for input validation failures to provide clearer error messages and improve debugging.
-- **Exception handling**: Expand exception coverage in the CLI function dispatcher to handle additional error types beyond current catches
+- **Architecture**: Currently procedural; future versions will migrate to OOP for better structure and maintainability, leveraging SQLAlchemy ORM fully.
 - **Global state**: The logged-in user ID is currently tracked via a global variable. Refactor to use dependency injection or a session context class to avoid global state.
 - **Code complexity**: The `cli.py` module contains too many lines and local variables. Consider refactoring into smaller functions or splitting into submodules.
 - **Package naming**: The main package `myapp` is generic. Rename to a more descriptive name (e.g., `movierater`) to better reflect the project’s purpose.
